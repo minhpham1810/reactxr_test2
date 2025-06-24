@@ -3,15 +3,11 @@ name: Deploy Vite site to GitHub Pages
 on:
   push:
     branches:
-      - main
-
-permissions:
-  contents: write # ✅ Allow writing to gh-pages branch
+      - main # or 'master' depending on your branch name
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,6 +26,5 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages
-          folder: dist
-          token: ${{ secrets.GITHUB_TOKEN }} # ✅ Use GitHub's built-in token
+          branch: gh-pages # Target branch
+          folder: dist # Folder to deploy
