@@ -40,3 +40,9 @@
 .read-the-docs {
   color: #888;
 }
+#arbutton {
+  position: fixed;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+}
