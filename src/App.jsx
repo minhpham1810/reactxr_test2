@@ -31,6 +31,9 @@ function Scene({
   onDragStateChange
 }) {
   const { isPresenting } = useXR()
+  
+  // Debug logging for AR state
+  console.log('Scene - isPresenting:', isPresenting)
 
   return (
     <>
@@ -59,9 +62,24 @@ function Scene({
         onAddNode={onAddNode}
         onReset={onReset}
         onExit={() => store.exitAR()}
-        position={[0, 1.2, -1]}
+        position={[0, 1.0, -0.8]}
         isPresenting={isPresenting}
         onStartInsert={onStartInsert}
+        exerciseMode={exerciseMode}
+        isComplete={isComplete}
+      />
+      
+      {/* Test AR Toolbar visibility */}
+      <ARToolbar
+        onAddNode={onAddNode}
+        onReset={onReset}
+        onExit={() => {
+          console.log('Exit AR clicked')
+          store.exitAR()
+        }}
+        position={[-2, 1.0, -0.8]}
+        isPresenting={true} // Force show for testing
+        onStartInsert={startInsertExercise}
         exerciseMode={exerciseMode}
         isComplete={isComplete}
       />
@@ -420,7 +438,10 @@ export function App() {
         onStartInsert={startInsertExercise}
         exerciseMode={exerciseMode}
         isComplete={isComplete}
-        onEnterAR={() => store.enterAR()}
+        onEnterAR={() => {
+          console.log('Entering AR mode...')
+          store.enterAR()
+        }}
       />
     )}
     

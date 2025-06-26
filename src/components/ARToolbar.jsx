@@ -74,6 +74,8 @@ function ARButton({
           roughness={MATERIAL.roughness}
           transparent
           opacity={MATERIAL.opacity}
+          emissive={hovered ? color : COLORS.white}
+          emissiveIntensity={0.3}
         />
       </mesh>
       <Text
@@ -102,12 +104,22 @@ export function ARToolbar({
   const groupRef = useRef()
 
   // Show toolbar in AR mode only, but add debug logging
-  console.log('ARToolbar - isPresenting:', isPresenting)
+  console.log('ARToolbar - isPresenting:', isPresenting, 'position:', position)
   
   if (!isPresenting) return null
 
   return (
     <group position={position} ref={groupRef}>
+      {/* Debug sphere to ensure the toolbar is being rendered */}
+      <mesh position={[0, 0.4, 0]}>
+        <sphereGeometry args={[0.05]} />
+        <meshStandardMaterial 
+          color="#FF0000" 
+          emissive="#FF0000"
+          emissiveIntensity={0.8}
+        />
+      </mesh>
+      
       {/* Make the background more visible and larger */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[
@@ -117,12 +129,12 @@ export function ARToolbar({
         ]} />
         <meshStandardMaterial
           color={COLORS.background}
-          opacity={0.95}
-          transparent
+          opacity={1.0}
+          transparent={false}
           metalness={MATERIAL.metalness}
           roughness={MATERIAL.roughness}
           emissive={COLORS.background}
-          emissiveIntensity={0.2}
+          emissiveIntensity={0.5}
         />
       </mesh>
 
