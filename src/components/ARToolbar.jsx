@@ -110,16 +110,6 @@ export function ARToolbar({
 
   return (
     <group position={position} ref={groupRef}>
-      {/* Debug sphere to ensure the toolbar is being rendered */}
-      <mesh position={[0, 0.4, 0]}>
-        <sphereGeometry args={[0.05]} />
-        <meshStandardMaterial 
-          color="#FF0000" 
-          emissive="#FF0000"
-          emissiveIntensity={0.8}
-        />
-      </mesh>
-      
       {/* Make the background more visible and larger */}
       <mesh castShadow receiveShadow>
         <boxGeometry args={[

@@ -32,13 +32,14 @@ function Scene({
 }) {
   const { isPresenting } = useXR()
   
-  // Debug logging for AR state
-  console.log('Scene - isPresenting:', isPresenting)
+  // Debug logging for AR state - handle undefined case
+  const isInAR = isPresenting === true
+  console.log('Scene - isPresenting:', isPresenting, 'isInAR:', isInAR)
 
   return (
     <>
       {/* Add OrbitControls for web mode only */}
-      {!isPresenting && (
+      {!isInAR && (
         <OrbitControls
           enabled={!isDraggingAnyNode}
           enablePan={true}
@@ -63,29 +64,14 @@ function Scene({
         onReset={onReset}
         onExit={() => store.exitAR()}
         position={[0, 1.0, -0.8]}
-        isPresenting={isPresenting}
+        isPresenting={isInAR}
         onStartInsert={onStartInsert}
         exerciseMode={exerciseMode}
         isComplete={isComplete}
       />
       
-      {/* Test AR Toolbar visibility */}
-      <ARToolbar
-        onAddNode={onAddNode}
-        onReset={onReset}
-        onExit={() => {
-          console.log('Exit AR clicked')
-          store.exitAR()
-        }}
-        position={[-2, 1.0, -0.8]}
-        isPresenting={true} // Force show for testing
-        onStartInsert={startInsertExercise}
-        exerciseMode={exerciseMode}
-        isComplete={isComplete}
-      />
-      
       {/* Exercise Instructions */}
-      {isPresenting && exerciseMode && (
+      {isInAR && exerciseMode && (
         <Text
           position={[0, 2, -1.5]}
           fontSize={0.08}
@@ -102,7 +88,7 @@ function Scene({
       )}
       
       {/* Exercise completion message for AR */}
-      {isPresenting && isComplete && (
+      {isInAR && isComplete && (
         <group position={[0, 1.8, -1]}>
           <mesh>
             <boxGeometry args={[2, 0.5, 0.1]} />
@@ -128,7 +114,7 @@ function Scene({
       )}
 
       {/* Web mode instructions */}
-      {!isPresenting && exerciseMode && (
+      {!isInAR && exerciseMode && (
         <Text
           position={[0, 2.5, 0]}
           fontSize={0.12}
@@ -156,7 +142,7 @@ function Scene({
               onSelect={() => onNodeSelect(node.id)}
               onDragEnd={(pos) => onNodeDragEnd(node.id, pos)}
               onDragStateChange={(isDragging) => onDragStateChange(node.id, isDragging)}
-              isPresenting={isPresenting}
+              isPresenting={isInAR}
               nodeIndex={nodeIndex}
               showIndex={exerciseMode === 'insert'}
               isStaging={node.isStaging}
@@ -248,7 +234,7 @@ function Scene({
       />
       
       {/* Ground plane - invisible but still receives shadows */}
-      {!isPresenting && (
+      {!isInAR && (
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, -0.002, 0]}
