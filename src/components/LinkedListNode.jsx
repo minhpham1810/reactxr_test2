@@ -1,21 +1,25 @@
 import { useRef, useState, useEffect } from 'react'
 import { Text } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useXR } from '@react-three/xr'
-import * as THREE from 'three'
 
-export function LinkedListNode({ position, data, isSelected, onSelect, onDragEnd }) {
+export function LinkedListNode({
+  position,
+  data,
+  isSelected,
+  onSelect,
+  onDragEnd,
+  isPresenting
+}) {
   const meshRef = useRef()
   const [isHovered, setIsHovered] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const { isPresenting } = useXR()
   const { camera } = useThree()
   
-  const dragPos = useRef(new THREE.Vector3())
+  const dragPos = useRef()
   
   useEffect(() => {
     if (meshRef.current) {
-      meshRef.current.position.copy(new THREE.Vector3(...position))
+      meshRef.current.position.set(...position)
     }
   }, [position])
 
@@ -61,8 +65,7 @@ export function LinkedListNode({ position, data, isSelected, onSelect, onDragEnd
   const handlePointerMove = (e) => {
     if (isDragging && !isPresenting) {
       e.stopPropagation()
-      const pos = new THREE.Vector3(e.point.x, e.point.y, e.point.z)
-      meshRef.current.position.copy(pos)
+      meshRef.current.position.set(e.point.x, e.point.y, e.point.z)
     }
   }
 

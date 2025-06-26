@@ -1,9 +1,12 @@
-import { useXR } from '@react-three/xr'
 import { Text } from '@react-three/drei'
 import { useState, useRef } from 'react'
-import * as THREE from 'three'
 
-function ARButton({ label, onClick, position, color = '#2196F3' }) {
+function ARButton({
+  label,
+  onClick,
+  position,
+  color = '#2196F3'
+}) {
   const [hovered, setHovered] = useState(false)
   const meshRef = useRef()
 
@@ -49,8 +52,7 @@ function ARButton({ label, onClick, position, color = '#2196F3' }) {
   )
 }
 
-export function ARToolbar({ position, onAddNode, onReset, onExit }) {
-  const { isPresenting } = useXR()
+export function ARToolbar({ position, onAddNode, onReset, onExit, isPresenting }) {
   const groupRef = useRef()
 
   if (!isPresenting) return null

@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { Environment, Grid } from '@react-three/drei'
 import { useState, useCallback } from 'react'
-import { XR, createXRStore } from '@react-three/xr'
+import { XR, createXRStore, useXR } from '@react-three/xr'
 import './App.css'
 import { LinkedListNode } from './components/LinkedListNode'
 import { NodeConnection } from './components/NodeConnection'
@@ -13,11 +13,108 @@ const store = createXRStore({
   foveation: 1
 })
 
+// Scene component handles all XR-specific rendering
+function Scene({
+  nodes,
+  onAddNode,
+  onReset,
+  onNodeSelect,
+  onNodeDragEnd,
+  selectedNode
+}) {
+  const { isPresenting } = useXR()
+
+  return (
+    <>
+      <ambientLight intensity={0.5} />
+      <directionalLight
+        position={[5, 5, 5]}
+        intensity={1}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+      />
+      
+      <ARToolbar
+        onAddNode={onAddNode}
+        onReset={onReset}
+        onExit={() => store.exitAR()}
+        position={[0, 1.5, -0.5]}
+        isPresenting={isPresenting}
+      />
+      
+      {nodes.map(node => (
+        <LinkedListNode
+          key={node.id}
+          position={[node.position.x, node.position.y, node.position.z]}
+          data={node.data}
+          isSelected={selectedNode === node.id}
+          onSelect={() => onNodeSelect(node.id)}
+          onDragEnd={(pos) => onNodeDragEnd(node.id, pos)}
+          isPresenting={isPresenting}
+        />
+      ))}
+
+      {/* Generate connections based on linked list structure */}
+      {nodes.reduce((conns, node) => {
+        if (node.next) {
+          const targetNode = nodes.find(n => n.id === node.next)
+          if (targetNode) {
+            conns.push(
+              <NodeConnection
+                key={`${node.id}-${node.next}`}
+                startPos={node.position}
+                endPos={targetNode.position}
+              />
+            )
+          }
+        }
+        return conns
+      }, [])}
+
+      {/* Scene Elements */}
+      <Grid
+        infiniteGrid
+        fadeStrength={1}
+        fadeDistance={50}
+        cellSize={0.5}
+        sectionSize={2}
+        position={[0, -0.001, 0]}
+      />
+      
+      {/* Ground plane for web mode */}
+      {!isPresenting && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, -0.002, 0]}
+          receiveShadow
+        >
+          <planeGeometry args={[50, 50]} />
+          <meshStandardMaterial
+            color="#f0f0f0"
+            opacity={0.6}
+            transparent
+          />
+        </mesh>
+      )}
+
+      {/* Debug sphere to check scene rendering */}
+      <mesh position={[0, 0.5, -2]}>
+        <sphereGeometry args={[0.2]} />
+        <meshStandardMaterial color="red" />
+      </mesh>
+      
+      <Environment preset="sunset" />
+    </>
+  )
+}
+
 export function App() {
   const [nodes, setNodes] = useState([])
   const [head, setHead] = useState(null)
   const [selectedNode, setSelectedNode] = useState(null)
   const [nodeCounter, setNodeCounter] = useState(1)
+
+  console.log('Rendering App')
 
   const handleAddNode = useCallback(() => {
     const newNode = {
@@ -71,13 +168,43 @@ export function App() {
 
   const handleReset = () => {
     setNodes([])
-    setConnections([])
+    setHead(null)
     setSelectedNode(null)
     setNodeCounter(1)
   }
 
   return <>
-    <button id="arbutton" onClick={() => store.enterAR()}>Enter AR</button>
+    <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 1000 }}>
+      <button
+        onClick={() => store.enterAR()}
+        style={{
+          padding: '10px 20px',
+          fontSize: '16px',
+          background: '#4CAF50',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer'
+        }}
+      >
+        Enter AR
+      </button>
+      <button
+        onClick={handleAddNode}
+        style={{
+          padding: '10px 20px',
+          fontSize: '16px',
+          background: '#2196F3',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+          marginLeft: '10px'
+        }}
+      >
+        Add Node
+      </button>
+    </div>
     <Canvas 
       shadows 
       style={{ height: '100vh' }}
@@ -85,55 +212,14 @@ export function App() {
       camera={{ position: [0, 1.6, 3], fov: 75 }}
     >
       <XR store={store}>
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize={[2048, 2048]}
-        />
-        
-        <ARToolbar
+        <Scene
+          nodes={nodes}
           onAddNode={handleAddNode}
           onReset={handleReset}
-          onExit={() => store.exitAR()}
-          position={[0, 1.5, -0.5]}
+          onNodeSelect={handleNodeSelect}
+          onNodeDragEnd={handleNodeDragEnd}
+          selectedNode={selectedNode}
         />
-        
-        {nodes.map(node => (
-          <LinkedListNode
-            key={node.id}
-            position={[node.position.x, node.position.y, node.position.z]}
-            data={node.data}
-            isSelected={selectedNode === node.id}
-            onSelect={() => handleNodeSelect(node.id)}
-            onDragEnd={(pos) => handleNodeDragEnd(node.id, pos)}
-          />
-        ))}
-
-        {connections.map(conn => {
-          const sourceNode = nodes.find(n => n.id === conn.source)
-          const targetNode = nodes.find(n => n.id === conn.target)
-          if (!sourceNode || !targetNode) return null
-
-          return (
-            <NodeConnection
-              key={conn.id}
-              startPos={sourceNode.position}
-              endPos={targetNode.position}
-            />
-          )
-        })}
-
-        <Grid
-          infiniteGrid
-          fadeStrength={1}
-          fadeDistance={50}
-          cellSize={0.5}
-          sectionSize={2}
-          position={[0, -0.001, 0]}
-        />
-        <Environment preset="city" />
       </XR>
     </Canvas>
   </>
