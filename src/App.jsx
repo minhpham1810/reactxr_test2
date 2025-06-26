@@ -1,11 +1,12 @@
 import { Canvas } from '@react-three/fiber'
-import { Environment, Grid } from '@react-three/drei'
+import { Environment, Grid, OrbitControls, Text } from '@react-three/drei'
 import { useState, useCallback } from 'react'
 import { XR, createXRStore, useXR } from '@react-three/xr'
 import './App.css'
 import { LinkedListNode } from './components/LinkedListNode'
 import { NodeConnection } from './components/NodeConnection'
 import { ARToolbar } from './components/ARToolbar'
+import { Toolbar } from './components/Toolbar'
 import { loadExercise } from './api/db'
 
 const store = createXRStore({
@@ -20,12 +21,32 @@ function Scene({
   onReset,
   onNodeSelect,
   onNodeDragEnd,
-  selectedNode
+  selectedNode,
+  exerciseMode,
+  insertPosition,
+  targetValue,
+  onStartInsert,
+  isComplete,
+  isDraggingAnyNode,
+  onDragStateChange
 }) {
   const { isPresenting } = useXR()
 
   return (
     <>
+      {/* Add OrbitControls for web mode only */}
+      {!isPresenting && (
+        <OrbitControls
+          enabled={!isDraggingAnyNode}
+          enablePan={true}
+          enableZoom={true}
+          enableRotate={true}
+          minDistance={1}
+          maxDistance={20}
+          target={[0, 0.5, 0]}
+        />
+      )}
+      
       <ambientLight intensity={0.5} />
       <directionalLight
         position={[5, 5, 5]}
@@ -38,38 +59,165 @@ function Scene({
         onAddNode={onAddNode}
         onReset={onReset}
         onExit={() => store.exitAR()}
-        position={[0, 1.5, -0.5]}
+        position={[0, 1.2, -1]}
         isPresenting={isPresenting}
+        onStartInsert={onStartInsert}
+        exerciseMode={exerciseMode}
+        isComplete={isComplete}
       />
       
-      {nodes.map(node => (
-        <LinkedListNode
-          key={node.id}
-          position={[node.position.x, node.position.y, node.position.z]}
-          data={node.data}
-          isSelected={selectedNode === node.id}
-          onSelect={() => onNodeSelect(node.id)}
-          onDragEnd={(pos) => onNodeDragEnd(node.id, pos)}
-          isPresenting={isPresenting}
-        />
-      ))}
-
-      {/* Generate connections based on linked list structure */}
-      {nodes.reduce((conns, node) => {
-        if (node.next) {
-          const targetNode = nodes.find(n => n.id === node.next)
-          if (targetNode) {
-            conns.push(
-              <NodeConnection
-                key={`${node.id}-${node.next}`}
-                startPos={node.position}
-                endPos={targetNode.position}
-              />
-            )
+      {/* Exercise Instructions */}
+      {isPresenting && exerciseMode && (
+        <Text
+          position={[0, 2, -1.5]}
+          fontSize={0.08}
+          color="#ffffff"
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={3}
+        >
+          {exerciseMode === 'insert' 
+            ? `Insert node with value ${targetValue} at position ${insertPosition}`
+            : 'Select exercise mode to begin'
           }
-        }
-        return conns
-      }, [])}
+        </Text>
+      )}
+      
+      {/* Exercise completion message for AR */}
+      {isPresenting && isComplete && (
+        <group position={[0, 1.8, -1]}>
+          <mesh>
+            <boxGeometry args={[2, 0.5, 0.1]} />
+            <meshStandardMaterial 
+              color="#4CAF50" 
+              emissive="#4CAF50"
+              emissiveIntensity={0.3}
+              transparent
+              opacity={0.9}
+            />
+          </mesh>
+          <Text
+            position={[0, 0, 0.06]}
+            fontSize={0.08}
+            color="#ffffff"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={1.8}
+          >
+            🎉 Excellent! Exercise Complete! 🎉
+          </Text>
+        </group>
+      )}
+
+      {/* Web mode instructions */}
+      {!isPresenting && exerciseMode && (
+        <Text
+          position={[0, 2.5, 0]}
+          fontSize={0.12}
+          color="#333333"
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={6}
+        >
+          {exerciseMode === 'insert' 
+            ? `Exercise: Insert node with value ${targetValue} at position ${insertPosition}`
+            : 'Welcome to Linked List Learning Tool'
+          }
+        </Text>
+      )}        {nodes.map((node, globalIndex) => {
+          // Calculate the correct index for non-staging nodes
+          const listNodes = nodes.filter(n => !n.isStaging)
+          const nodeIndex = node.isStaging ? undefined : listNodes.findIndex(n => n.id === node.id)
+          
+          return (
+            <LinkedListNode
+              key={node.id}
+              position={[node.position.x, node.position.y, node.position.z]}
+              data={node.data}
+              isSelected={selectedNode === node.id}
+              onSelect={() => onNodeSelect(node.id)}
+              onDragEnd={(pos) => onNodeDragEnd(node.id, pos)}
+              onDragStateChange={(isDragging) => onDragStateChange(node.id, isDragging)}
+              isPresenting={isPresenting}
+              nodeIndex={nodeIndex}
+              showIndex={exerciseMode === 'insert'}
+              isStaging={node.isStaging}
+            />
+          )
+        })}        {/* Generate connections based on linked list structure */}
+        {nodes.filter(n => !n.isStaging).reduce((conns, node) => {
+          if (node.next) {
+            const targetNode = nodes.find(n => n.id === node.next)
+            if (targetNode) {
+              conns.push(
+                <NodeConnection
+                  key={`${node.id}-${node.next}`}
+                  startPos={node.position}
+                  endPos={targetNode.position}
+                />
+              )
+            }
+          }
+          return conns
+        }, [])}
+
+        {/* Insertion guide zones for exercise mode */}
+        {exerciseMode === 'insert' && (
+          <>
+            {/* Drop zone at the beginning */}
+            <mesh key="guide-start" position={[-3, 0.1, 0]}>
+              <cylinderGeometry args={[0.4, 0.4, 0.05, 16]} />
+              <meshStandardMaterial 
+                color={insertPosition === 0 ? "#4CAF50" : "#FFC107"} 
+                transparent 
+                opacity={0.4}
+                emissive={insertPosition === 0 ? "#4CAF50" : "#FFC107"}
+                emissiveIntensity={0.3}
+              />
+            </mesh>
+            
+            {/* Drop zones between nodes */}
+            {nodes.filter(n => !n.isStaging).map((node, index) => {
+              const nextNode = nodes.filter(n => !n.isStaging)[index + 1]
+              if (nextNode) {
+                const midX = (node.position.x + nextNode.position.x) / 2
+                const isTargetPosition = insertPosition === index + 1
+                
+                return (
+                  <mesh key={`guide-${index + 1}`} position={[midX, 0.1, 0]}>
+                    <cylinderGeometry args={[0.4, 0.4, 0.05, 16]} />
+                    <meshStandardMaterial 
+                      color={isTargetPosition ? "#4CAF50" : "#FFC107"} 
+                      transparent 
+                      opacity={0.4}
+                      emissive={isTargetPosition ? "#4CAF50" : "#FFC107"}
+                      emissiveIntensity={0.3}
+                    />
+                  </mesh>
+                )
+              }
+              return null
+            })}
+            
+            {/* Drop zone at the end */}
+            {nodes.filter(n => !n.isStaging).length > 0 && (
+              <mesh key="guide-end" position={[
+                nodes.filter(n => !n.isStaging)[nodes.filter(n => !n.isStaging).length - 1].position.x + 2, 
+                0.1, 
+                0
+              ]}>
+                <cylinderGeometry args={[0.4, 0.4, 0.05, 16]} />
+                <meshStandardMaterial 
+                  color={insertPosition >= nodes.filter(n => !n.isStaging).length ? "#4CAF50" : "#FFC107"} 
+                  transparent 
+                  opacity={0.4}
+                  emissive={insertPosition >= nodes.filter(n => !n.isStaging).length ? "#4CAF50" : "#FFC107"}
+                  emissiveIntensity={0.3}
+                />
+              </mesh>
+            )}
+          </>
+        )}
 
       {/* Scene Elements */}
       <Grid
@@ -81,62 +229,80 @@ function Scene({
         position={[0, -0.001, 0]}
       />
       
-      {/* Ground plane for web mode */}
+      {/* Ground plane - invisible but still receives shadows */}
       {!isPresenting && (
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, -0.002, 0]}
-          receiveShadow
+          //receiveShadow
         >
           <planeGeometry args={[50, 50]} />
           <meshStandardMaterial
             color="#f0f0f0"
-            opacity={0.6}
+            opacity={0}
             transparent
+            visible={false}
           />
         </mesh>
       )}
 
-      {/* Debug sphere to check scene rendering */}
-      <mesh position={[0, 0.5, -2]}>
-        <sphereGeometry args={[0.2]} />
-        <meshStandardMaterial color="red" />
-      </mesh>
-      
-      <Environment preset="sunset" />
+      {/* Remove debug sphere and update Environment */}
+      <Environment preset="city" />
     </>
   )
 }
 
 export function App() {
   const [nodes, setNodes] = useState([])
-  const [head, setHead] = useState(null)
   const [selectedNode, setSelectedNode] = useState(null)
   const [nodeCounter, setNodeCounter] = useState(1)
+  const [isDraggingAnyNode, setIsDraggingAnyNode] = useState(false)
+  
+  // Exercise state
+  const [exerciseMode, setExerciseMode] = useState(null) // 'insert', 'delete', 'search'
+  const [targetValue, setTargetValue] = useState(5)
+  const [insertPosition, setInsertPosition] = useState(2)
+  const [draggedNode, setDraggedNode] = useState(null)
+  const [isComplete, setIsComplete] = useState(false)
 
-  console.log('Rendering App')
+  // Initialize with a basic linked list for demonstration
+  const initializeBasicList = useCallback(() => {
+    const basicNodes = [
+      { id: 'node-1', data: 1, next: 'node-2', position: { x: -2, y: 0.5, z: 0 }},
+      { id: 'node-2', data: 3, next: 'node-3', position: { x: 0, y: 0.5, z: 0 }},
+      { id: 'node-3', data: 7, next: null, position: { x: 2, y: 0.5, z: 0 }}
+    ]
+    setNodes(basicNodes)
+    setNodeCounter(4)
+  }, [])
 
-  const handleAddNode = useCallback(() => {
+  // Create a new node in the "staging area"
+  const handleAddNode = useCallback((value = null) => {
+    const nodeValue = value !== null ? value : targetValue
     const newNode = {
       id: `node-${nodeCounter}`,
-      data: nodeCounter,
+      data: nodeValue,
       next: null,
-      position: { x: Math.random() * 4 - 2, y: 0.5, z: Math.random() * 4 - 2 }
+      position: { x: 0, y: 1.5, z: -2 }, // Staging area above the list
+      isStaging: true
     }
-    
     setNodes(prev => [...prev, newNode])
-    if (!head) {
-      setHead(newNode.id)
-    }
     setNodeCounter(prev => prev + 1)
-  }, [nodeCounter, head])
+    return newNode.id
+  }, [nodeCounter, targetValue])
+
+  // Start insert exercise
+  const startInsertExercise = () => {
+    setExerciseMode('insert')
+    setIsComplete(false)
+    initializeBasicList()
+  }
 
   const handleNodeSelect = (nodeId) => {
-    // When a node is selected, we're either starting a connection or completing one
     if (selectedNode === nodeId) {
       setSelectedNode(null)
-    } else if (selectedNode) {
-      // Connect nodes in the linked list
+    } else if (selectedNode && exerciseMode !== 'insert') {
+      // Regular connection mode (not during insert exercise)
       setNodes(prev => prev.map(node =>
         node.id === selectedNode ? { ...node, next: nodeId } : node
       ))
@@ -147,69 +313,122 @@ export function App() {
   }
 
   const handleNodeDragEnd = (nodeId, newPosition) => {
-    setNodes(prev => prev.map(node =>
-      node.id === nodeId
-        ? { ...node, position: newPosition }
-        : node
-    ))
+    setNodes(prev => {
+      const updatedNodes = prev.map(node => {
+        if (node.id === nodeId) {
+          const updatedNode = { ...node, position: newPosition }
+          
+          // If this was a staging node and it's been moved into the main area
+          if (node.isStaging && newPosition.y < 1.0) {
+            delete updatedNode.isStaging
+          }
+          
+          return updatedNode
+        }
+        return node
+      })
+      
+      // Check completion after state update with current nodes
+      if (exerciseMode === 'insert') {
+        const draggedNode = prev.find(n => n.id === nodeId)
+        if (draggedNode && draggedNode.isStaging && newPosition.y < 1.0) {
+          setTimeout(() => checkInsertCompletion(nodeId, newPosition, updatedNodes), 100)
+        }
+      }
+      
+      return updatedNodes
+    })
   }
 
-  // Generate connections based on linked list structure
-  const connections = nodes.reduce((conns, node) => {
-    if (node.next) {
-      conns.push({
-        id: `${node.id}-${node.next}`,
-        source: node.id,
-        target: node.next
-      })
+  // Check if the insert operation is completed correctly
+  const checkInsertCompletion = (nodeId, position, currentNodes) => {
+    // Get the list nodes (excluding staging nodes and the dragged node)
+    const listNodes = currentNodes.filter(n => !n.isStaging && n.id !== nodeId)
+    
+    // Sort by x position to determine the intended insertion point
+    listNodes.sort((a, b) => a.position.x - b.position.x)
+    
+    console.log('Checking completion:', { nodeId, position, listNodes, insertPosition })
+    
+    // Check if the node was inserted at the correct position
+    const targetIndex = insertPosition
+    if (targetIndex <= listNodes.length) {
+      let expectedX
+      
+      if (targetIndex === 0) {
+        // Insert at beginning
+        expectedX = listNodes.length > 0 ? listNodes[0].position.x - 2 : -2
+      } else if (targetIndex >= listNodes.length) {
+        // Insert at end
+        expectedX = listNodes.length > 0 ? listNodes[listNodes.length - 1].position.x + 2 : 2
+      } else {
+        // Insert in middle
+        expectedX = (listNodes[targetIndex - 1].position.x + listNodes[targetIndex].position.x) / 2
+      }
+      
+      console.log('Expected X:', expectedX, 'Actual X:', position.x, 'Difference:', Math.abs(position.x - expectedX))
+      
+      if (Math.abs(position.x - expectedX) < 1.5) {
+        setIsComplete(true)
+        // Always show console log, but different user feedback for AR vs Web
+        console.log('Exercise completed successfully!')
+        
+        // For web mode, show alert (AR will show 3D message via isComplete state)
+        setTimeout(() => {
+          alert('Excellent! You successfully inserted the node at the correct position!')
+        }, 500)
+      }
     }
-    return conns
-  }, [])
+  }
 
   const handleReset = () => {
     setNodes([])
-    setHead(null)
     setSelectedNode(null)
     setNodeCounter(1)
+    setExerciseMode(null)
+    setIsComplete(false)
+    setIsDraggingAnyNode(false) // Reset drag state
   }
 
+  // Handle drag state changes from individual nodes
+  const handleDragStateChange = useCallback((nodeId, isDragging) => {
+    setIsDraggingAnyNode(isDragging)
+  }, [])
+
+  const handleLoad = (exerciseId) => {
+    // Load exercise from database
+    console.log('Loading exercise:', exerciseId)
+  }
+
+  const getCurrentState = () => ({
+    nodes,
+    selectedNode,
+    nodeCounter,
+    exerciseMode,
+    targetValue,
+    insertPosition
+  })
+
   return <>
-    <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 1000 }}>
-      <button
-        onClick={() => store.enterAR()}
-        style={{
-          padding: '10px 20px',
-          fontSize: '16px',
-          background: '#4CAF50',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer'
-        }}
-      >
-        Enter AR
-      </button>
-      <button
-        onClick={handleAddNode}
-        style={{
-          padding: '10px 20px',
-          fontSize: '16px',
-          background: '#2196F3',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          marginLeft: '10px'
-        }}
-      >
-        Add Node
-      </button>
-    </div>
-    <Canvas 
-      shadows 
-      style={{ height: '100vh' }}
+    {/* Web-only toolbar */}
+    {!store.isPresenting && (
+      <Toolbar
+        onAddNode={() => handleAddNode()}
+        onReset={handleReset}
+        onLoad={handleLoad}
+        currentState={getCurrentState()}
+        onStartInsert={startInsertExercise}
+        exerciseMode={exerciseMode}
+        isComplete={isComplete}
+        onEnterAR={() => store.enterAR()}
+      />
+    )}
+    
+    <Canvas
+      shadows
+      className="scene-canvas"
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: [0, 1.6, 3], fov: 75 }}
+      camera={{ position: [0, 2, 4], fov: 75 }}
     >
       <XR store={store}>
         <Scene
@@ -219,6 +438,13 @@ export function App() {
           onNodeSelect={handleNodeSelect}
           onNodeDragEnd={handleNodeDragEnd}
           selectedNode={selectedNode}
+          exerciseMode={exerciseMode}
+          insertPosition={insertPosition}
+          targetValue={targetValue}
+          onStartInsert={startInsertExercise}
+          isComplete={isComplete}
+          isDraggingAnyNode={isDraggingAnyNode}
+          onDragStateChange={handleDragStateChange}
         />
       </XR>
     </Canvas>

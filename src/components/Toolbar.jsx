@@ -15,7 +15,16 @@ const buttonStyle = {
   gap: '8px',
 }
 
-export function Toolbar({ onAddNode, onConnectNodes, onReset, onLoad, currentState }) {
+export function Toolbar({ 
+  onAddNode, 
+  onReset, 
+  onLoad, 
+  currentState, 
+  onStartInsert, 
+  exerciseMode, 
+  isComplete,
+  onEnterAR
+}) {
   const [showLoadModal, setShowLoadModal] = useState(false)
 
   const handleSave = async () => {
@@ -50,30 +59,79 @@ export function Toolbar({ onAddNode, onConnectNodes, onReset, onLoad, currentSta
         boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
         zIndex: 1000,
       }}>
-        <button
-          onClick={onAddNode}
-          style={{ ...buttonStyle, background: '#2196F3' }}
-        >
-          ➕ Add Node
-        </button>
+        <div style={{
+          marginBottom: '15px',
+          padding: '10px',
+          background: exerciseMode ? '#e3f2fd' : '#f5f5f5',
+          borderRadius: '6px',
+          border: exerciseMode ? '2px solid #2196F3' : '1px solid #ddd'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
+            {exerciseMode ? `Exercise: ${exerciseMode.toUpperCase()}` : 'Linked List Authoring Tool'}
+          </div>
+          {exerciseMode === 'insert' && (
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              Insert node with value 5 at position 2
+              {isComplete && (
+                <div style={{ color: '#4CAF50', fontWeight: 'bold', marginTop: '4px' }}>
+                  ✅ Exercise Complete!
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {!exerciseMode ? (
+          <>
+            <button
+              onClick={onEnterAR}
+              style={{ ...buttonStyle, background: '#E91E63' }}
+            >
+              🥽 Enter AR
+            </button>
+            
+            <button
+              onClick={onStartInsert}
+              style={{ ...buttonStyle, background: '#4CAF50' }}
+            >
+              🎯 Start Insert Exercise
+            </button>
+            
+            <button
+              onClick={onAddNode}
+              style={{ ...buttonStyle, background: '#2196F3' }}
+            >
+              ➕ Add Node
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onEnterAR}
+              style={{ ...buttonStyle, background: '#E91E63' }}
+            >
+              🥽 Continue in AR
+            </button>
+            
+            <button
+              onClick={onAddNode}
+              style={{ ...buttonStyle, background: '#FF9800' }}
+            >
+              ➕ Add Target Node
+            </button>
+          </>
+        )}
         
         <button
-          onClick={onConnectNodes}
-          style={{ ...buttonStyle, background: '#4CAF50' }}
-        >
-          🔗 Connect Nodes
-        </button>
-
-        <button
           onClick={handleSave}
-          style={{ ...buttonStyle, background: '#FF9800' }}
+          style={{ ...buttonStyle, background: '#9C27B0' }}
         >
           💾 Save Exercise
         </button>
 
         <button
           onClick={() => setShowLoadModal(true)}
-          style={{ ...buttonStyle, background: '#9C27B0' }}
+          style={{ ...buttonStyle, background: '#607D8B' }}
         >
           📂 Load Exercise
         </button>

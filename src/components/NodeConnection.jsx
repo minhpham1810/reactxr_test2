@@ -2,22 +2,52 @@ import { useRef } from 'react'
 import { CatmullRomLine, Sphere } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 
+// Connection appearance constants
+const COLORS = {
+  line: '#2196F3',
+  glow: '#64B5F6'
+}
+
+const DIMENSIONS = {
+  lineWidth: {
+    main: 6,
+    glow: 3
+  },
+  arrow: {
+    size: 0.08,
+    segments: 16,
+    distance: 0.3
+  },
+  curve: {
+    tension: 0.5,
+    heightOffset: 0.5
+  }
+}
+
+const MATERIAL = {
+  opacity: 0.8,
+  emissiveIntensity: 0.5,
+  pulseSpeed: 2,
+  pulseRange: 0.3,
+  baseOpacity: 0.5
+}
+
 export function NodeConnection({ startPos, endPos }) {
   const arrowRef = useRef()
   const pulseRef = useRef(0)
 
   // Animate the connection with a pulse effect
   useFrame((state, delta) => {
-    pulseRef.current += delta * 2
+    pulseRef.current += delta * MATERIAL.pulseSpeed
     if (arrowRef.current) {
-      arrowRef.current.material.opacity = 0.5 + Math.sin(pulseRef.current) * 0.3
+      arrowRef.current.material.opacity = MATERIAL.baseOpacity + Math.sin(pulseRef.current) * MATERIAL.pulseRange
     }
   })
 
   // Calculate control points for a curved path
   const midPoint = {
     x: (startPos.x + endPos.x) / 2,
-    y: startPos.y + 0.5,
+    y: startPos.y + DIMENSIONS.curve.heightOffset,
     z: (startPos.z + endPos.z) / 2
   }
 
@@ -36,9 +66,9 @@ export function NodeConnection({ startPos, endPos }) {
 
   // Arrow position (slightly before end point)
   const arrowPos = {
-    x: endPos.x - normalized.x * 0.3,
-    y: endPos.y - normalized.y * 0.3,
-    z: endPos.z - normalized.z * 0.3
+    x: endPos.x - normalized.x * DIMENSIONS.arrow.distance,
+    y: endPos.y - normalized.y * DIMENSIONS.arrow.distance,
+    z: endPos.z - normalized.z * DIMENSIONS.arrow.distance
   }
 
   const points = [
@@ -52,17 +82,17 @@ export function NodeConnection({ startPos, endPos }) {
       {/* Main connection line */}
       <CatmullRomLine
         points={points}
-        color="#2196F3"
-        lineWidth={6}
-        tension={0.5}
+        color={COLORS.line}
+        lineWidth={DIMENSIONS.lineWidth.main}
+        tension={DIMENSIONS.curve.tension}
       />
 
       {/* Glowing core line */}
       <CatmullRomLine
         points={points}
-        color="#64B5F6"
-        lineWidth={3}
-        tension={0.5}
+        color={COLORS.glow}
+        lineWidth={DIMENSIONS.lineWidth.glow}
+        tension={DIMENSIONS.curve.tension}
       />
 
       {/* Arrow indicator */}
@@ -70,13 +100,17 @@ export function NodeConnection({ startPos, endPos }) {
         position={[arrowPos.x, arrowPos.y, arrowPos.z]}
         ref={arrowRef}
       >
-        <sphereGeometry args={[0.08, 16, 16]} />
+        <sphereGeometry args={[
+          DIMENSIONS.arrow.size,
+          DIMENSIONS.arrow.segments,
+          DIMENSIONS.arrow.segments
+        ]} />
         <meshStandardMaterial
-          color="#2196F3"
+          color={COLORS.line}
           transparent
-          opacity={0.8}
-          emissive="#64B5F6"
-          emissiveIntensity={0.5}
+          opacity={MATERIAL.opacity}
+          emissive={COLORS.glow}
+          emissiveIntensity={MATERIAL.emissiveIntensity}
         />
       </mesh>
     </group>

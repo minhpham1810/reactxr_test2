@@ -1,11 +1,44 @@
 import { Text } from '@react-three/drei'
 import { useState, useRef } from 'react'
 
+// Material constants
+const COLORS = {
+  primary: '#2196F3',
+  success: '#4CAF50',
+  danger: '#f44336',
+  purple: '#9c27b0',
+  white: '#ffffff',
+  background: '#333333'
+}
+
+const DIMENSIONS = {
+  button: {
+    width: 0.3,
+    height: 0.1,
+    depth: 0.05,
+    textSize: 0.04,
+    spacing: 0.12
+  },
+  toolbar: {
+    width: 0.8,
+    height: 0.4,
+    depth: 0.02,
+    titleSize: 0.05
+  }
+}
+
+const MATERIAL = {
+  metalness: 0.5,
+  roughness: 0.5,
+  opacity: 0.9,
+  toolbarOpacity: 0.8
+}
+
 function ARButton({
   label,
   onClick,
   position,
-  color = '#2196F3'
+  color = COLORS.primary
 }) {
   const [hovered, setHovered] = useState(false)
   const meshRef = useRef()
@@ -30,13 +63,17 @@ function ARButton({
           setHovered(false)
         }}
       >
-        <boxGeometry args={[0.3, 0.1, 0.05]} />
+        <boxGeometry args={[
+          DIMENSIONS.button.width,
+          DIMENSIONS.button.height,
+          DIMENSIONS.button.depth
+        ]} />
         <meshStandardMaterial
-          color={hovered ? '#ffffff' : color}
-          metalness={0.5}
-          roughness={0.5}
+          color={hovered ? COLORS.white : color}
+          metalness={MATERIAL.metalness}
+          roughness={MATERIAL.roughness}
           transparent
-          opacity={0.9}
+          opacity={MATERIAL.opacity}
         />
       </mesh>
       <Text
@@ -52,53 +89,113 @@ function ARButton({
   )
 }
 
-export function ARToolbar({ position, onAddNode, onReset, onExit, isPresenting }) {
+export function ARToolbar({ 
+  position, 
+  onAddNode, 
+  onReset, 
+  onExit, 
+  isPresenting, 
+  onStartInsert, 
+  exerciseMode, 
+  isComplete 
+}) {
   const groupRef = useRef()
 
+  // Show toolbar in AR mode only, but add debug logging
+  console.log('ARToolbar - isPresenting:', isPresenting)
+  
   if (!isPresenting) return null
 
   return (
     <group position={position} ref={groupRef}>
+      {/* Make the background more visible and larger */}
       <mesh castShadow receiveShadow>
-        <boxGeometry args={[0.8, 0.4, 0.02]} />
+        <boxGeometry args={[
+          DIMENSIONS.toolbar.width,
+          exerciseMode ? 0.6 : DIMENSIONS.toolbar.height,
+          DIMENSIONS.toolbar.depth
+        ]} />
         <meshStandardMaterial
-          color="#333333"
-          opacity={0.8}
+          color={COLORS.background}
+          opacity={0.95}
           transparent
-          metalness={0.5}
-          roughness={0.5}
+          metalness={MATERIAL.metalness}
+          roughness={MATERIAL.roughness}
+          emissive={COLORS.background}
+          emissiveIntensity={0.2}
         />
       </mesh>
 
       <Text
-        position={[0, 0.12, 0.02]}
+        position={[0, exerciseMode ? 0.22 : 0.12, 0.02]}
         fontSize={0.05}
         color="#ffffff"
         anchorX="center"
         anchorY="middle"
       >
-        Linked List Tools
+        {exerciseMode ? `${exerciseMode.toUpperCase()} Exercise` : 'Linked List Tools'}
       </Text>
 
-      <ARButton
-        label="Insert Node"
-        onClick={onAddNode}
-        position={[0, 0, 0.02]}
-        color="#4CAF50"
-      />
+      {/* Exercise status */}
+      {exerciseMode && (
+        <Text
+          position={[0, 0.15, 0.02]}
+          fontSize={0.03}
+          color={isComplete ? "#4CAF50" : "#ffffff"}
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={0.7}
+        >
+          {isComplete ? "✅ Complete!" : "Insert node value 5 at position 2"}
+        </Text>
+      )}
 
-      <ARButton
-        label="Reset List"
-        onClick={onReset}
-        position={[0, -0.12, 0.02]}
-        color="#f44336"
-      />
+      {!exerciseMode ? (
+        <>
+          <ARButton
+            label="Start Insert"
+            onClick={onStartInsert}
+            position={[0, 0.06, 0.02]}
+            color={COLORS.success}
+          />
+
+          <ARButton
+            label="Add Node"
+            onClick={onAddNode}
+            position={[0, -0.06, 0.02]}
+            color={COLORS.primary}
+          />
+
+          <ARButton
+            label="Reset"
+            onClick={onReset}
+            position={[0, -0.18, 0.02]}
+            color={COLORS.danger}
+          />
+        </>
+      ) : (
+        <>
+          <ARButton
+            label="Add Target"
+            onClick={onAddNode}
+            position={[0, 0.06, 0.02]}
+            color={COLORS.purple}
+          />
+
+          <ARButton
+            label="Reset"
+            onClick={onReset}
+            position={[0, -0.06, 0.02]}
+            color={COLORS.danger}
+          />
+        </>
+      )}
 
       <ARButton
         label="Exit AR"
         onClick={onExit}
-        position={[0, -0.24, 0.02]}
-        color="#9c27b0"
+        position={[0, exerciseMode ? -0.24 : -0.30, 0.02]}
+        color={COLORS.purple}
       />
     </group>
   )
