@@ -15,7 +15,7 @@ const store = createXRStore({
 
 export function App() {
   const [nodes, setNodes] = useState([])
-  const [connections, setConnections] = useState([])
+  const [head, setHead] = useState(null)
   const [selectedNode, setSelectedNode] = useState(null)
   const [nodeCounter, setNodeCounter] = useState(1)
 
@@ -23,26 +23,26 @@ export function App() {
     const newNode = {
       id: `node-${nodeCounter}`,
       data: nodeCounter,
+      next: null,
       position: { x: Math.random() * 4 - 2, y: 0.5, z: Math.random() * 4 - 2 }
     }
+    
     setNodes(prev => [...prev, newNode])
+    if (!head) {
+      setHead(newNode.id)
+    }
     setNodeCounter(prev => prev + 1)
-  }, [nodeCounter])
+  }, [nodeCounter, head])
 
   const handleNodeSelect = (nodeId) => {
+    // When a node is selected, we're either starting a connection or completing one
     if (selectedNode === nodeId) {
       setSelectedNode(null)
     } else if (selectedNode) {
-      // Connect nodes
-      const sourceNode = nodes.find(n => n.id === selectedNode)
-      const targetNode = nodes.find(n => n.id === nodeId)
-      if (sourceNode && targetNode) {
-        setConnections(prev => [...prev, {
-          id: `${sourceNode.id}-${targetNode.id}`,
-          source: sourceNode.id,
-          target: targetNode.id
-        }])
-      }
+      // Connect nodes in the linked list
+      setNodes(prev => prev.map(node =>
+        node.id === selectedNode ? { ...node, next: nodeId } : node
+      ))
       setSelectedNode(null)
     } else {
       setSelectedNode(nodeId)
@@ -56,6 +56,18 @@ export function App() {
         : node
     ))
   }
+
+  // Generate connections based on linked list structure
+  const connections = nodes.reduce((conns, node) => {
+    if (node.next) {
+      conns.push({
+        id: `${node.id}-${node.next}`,
+        source: node.id,
+        target: node.next
+      })
+    }
+    return conns
+  }, [])
 
   const handleReset = () => {
     setNodes([])
@@ -122,10 +134,6 @@ export function App() {
           position={[0, -0.001, 0]}
         />
         <Environment preset="city" />
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-          <planeGeometry args={[50, 50]} />
-          <meshStandardMaterial color="#f0f0f0" />
-        </mesh>
       </XR>
     </Canvas>
   </>

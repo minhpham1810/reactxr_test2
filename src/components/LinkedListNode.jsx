@@ -1,40 +1,79 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Text } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useXR } from '@react-three/xr'
+import * as THREE from 'three'
 
 export function LinkedListNode({ position, data, isSelected, onSelect, onDragEnd }) {
   const meshRef = useRef()
   const [isHovered, setIsHovered] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const { isPresenting } = useXR()
+  const { camera } = useThree()
+  
+  const dragPos = useRef(new THREE.Vector3())
+  
+  useEffect(() => {
+    if (meshRef.current) {
+      meshRef.current.position.copy(new THREE.Vector3(...position))
+    }
+  }, [position])
 
-  // Hover effects
+  // Hover and selection effects
   useFrame(() => {
     if (isHovered || isSelected) {
       meshRef.current.rotation.y += 0.02
     }
+    
+    if (isDragging) {
+      // Update position based on pointer/controller
+      if (isPresenting) {
+        // AR dragging logic
+        const controller = camera.parent
+        if (controller) {
+          meshRef.current.position.copy(controller.position)
+        }
+      }
+    }
   })
 
-  const handleGrab = (e) => {
-    if (isPresenting) {
+  const handlePointerDown = (e) => {
+    e.stopPropagation()
+    setIsDragging(true)
+    dragPos.current.copy(meshRef.current.position)
+  }
+
+  const handlePointerUp = (e) => {
+    e.stopPropagation()
+    if (isDragging) {
+      setIsDragging(false)
+      // Notify parent of new position
+      onDragEnd([
+        meshRef.current.position.x,
+        meshRef.current.position.y,
+        meshRef.current.position.z
+      ])
+    } else {
       onSelect()
     }
   }
 
-  const handleClick = (e) => {
-    if (!isPresenting) {
-      onSelect()
+  const handlePointerMove = (e) => {
+    if (isDragging && !isPresenting) {
+      e.stopPropagation()
+      const pos = new THREE.Vector3(e.point.x, e.point.y, e.point.z)
+      meshRef.current.position.copy(pos)
     }
   }
 
   return (
     <group
-      position={position}
       ref={meshRef}
-      onClick={handleClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerMove={handlePointerMove}
       onPointerEnter={() => setIsHovered(true)}
-      onPointerLeave={() => setIsHovered(false)}
-      onGrabStart={handleGrab}
+      onPointerLeave={() => !isDragging && setIsHovered(false)}
     >
       {/* Node body */}
       <mesh castShadow receiveShadow>

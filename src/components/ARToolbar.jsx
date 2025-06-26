@@ -1,23 +1,39 @@
 import { useXR } from '@react-three/xr'
 import { Text } from '@react-three/drei'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import * as THREE from 'three'
 
 function ARButton({ label, onClick, position, color = '#2196F3' }) {
   const [hovered, setHovered] = useState(false)
+  const meshRef = useRef()
+
+  const handlePointerDown = (e) => {
+    e.stopPropagation()
+    onClick()
+  }
 
   return (
     <group position={position}>
       <mesh
+        ref={meshRef}
         castShadow
-        onClick={onClick}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+        onPointerDown={handlePointerDown}
+        onPointerEnter={(e) => {
+          e.stopPropagation()
+          setHovered(true)
+        }}
+        onPointerLeave={(e) => {
+          e.stopPropagation()
+          setHovered(false)
+        }}
       >
         <boxGeometry args={[0.3, 0.1, 0.05]} />
         <meshStandardMaterial
           color={hovered ? '#ffffff' : color}
           metalness={0.5}
           roughness={0.5}
+          transparent
+          opacity={0.9}
         />
       </mesh>
       <Text
@@ -35,15 +51,15 @@ function ARButton({ label, onClick, position, color = '#2196F3' }) {
 
 export function ARToolbar({ position, onAddNode, onReset, onExit }) {
   const { isPresenting } = useXR()
+  const groupRef = useRef()
 
   if (!isPresenting) return null
 
   return (
-    <group position={position}>
-      {/* Background panel */}
+    <group position={position} ref={groupRef}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[0.8, 0.4, 0.02]} />
-        <meshStandardMaterial 
+        <meshStandardMaterial
           color="#333333"
           opacity={0.8}
           transparent
@@ -52,7 +68,6 @@ export function ARToolbar({ position, onAddNode, onReset, onExit }) {
         />
       </mesh>
 
-      {/* Title */}
       <Text
         position={[0, 0.12, 0.02]}
         fontSize={0.05}
@@ -63,16 +78,15 @@ export function ARToolbar({ position, onAddNode, onReset, onExit }) {
         Linked List Tools
       </Text>
 
-      {/* Buttons */}
       <ARButton
-        label="Add Node"
+        label="Insert Node"
         onClick={onAddNode}
         position={[0, 0, 0.02]}
-        color="#2196F3"
+        color="#4CAF50"
       />
 
       <ARButton
-        label="Reset"
+        label="Reset List"
         onClick={onReset}
         position={[0, -0.12, 0.02]}
         color="#f44336"
