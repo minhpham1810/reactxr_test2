@@ -51,13 +51,8 @@ function Scene({
         />
       )}
       
-      <ambientLight intensity={0.5} />
-      <directionalLight
-        position={[5, 5, 5]}
-        intensity={1}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-      />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[5, 5, 5]} intensity={0.8} />
       
       <ARToolbar
         onAddNode={onAddNode}
@@ -89,28 +84,16 @@ function Scene({
       
       {/* Exercise completion message for AR */}
       {isInAR && isComplete && (
-        <group position={[0, 1.8, -1]}>
-          <mesh>
-            <boxGeometry args={[2, 0.5, 0.1]} />
-            <meshStandardMaterial 
-              color="#4CAF50" 
-              emissive="#4CAF50"
-              emissiveIntensity={0.3}
-              transparent
-              opacity={0.9}
-            />
-          </mesh>
-          <Text
-            position={[0, 0, 0.06]}
-            fontSize={0.08}
-            color="#ffffff"
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={1.8}
-          >
-            🎉 Excellent! Exercise Complete! 🎉
-          </Text>
-        </group>
+        <Text
+          position={[0, 1.8, -1]}
+          fontSize={0.08}
+          color="#4CAF50"
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={1.8}
+        >
+          Exercise Complete!
+        </Text>
       )}
 
       {/* Web mode instructions */}
@@ -169,8 +152,8 @@ function Scene({
         {exerciseMode === 'insert' && (
           <>
             {/* Drop zone at the beginning */}
-            <mesh key="guide-start" position={[-3, 0.1, 0]}>
-              <cylinderGeometry args={[0.4, 0.4, 0.05, 16]} />
+            <mesh key="guide-start" position={[-1.2, 0.05, 0]}>
+              <cylinderGeometry args={[0.15, 0.15, 0.02, 16]} />
               <meshStandardMaterial 
                 color={insertPosition === 0 ? "#4CAF50" : "#FFC107"} 
                 transparent 
@@ -225,12 +208,11 @@ function Scene({
 
       {/* Scene Elements */}
       <Grid
-        infiniteGrid
-        fadeStrength={1}
-        fadeDistance={50}
-        cellSize={0.5}
-        sectionSize={2}
         position={[0, -0.001, 0]}
+        args={[10, 10]}
+        cellSize={0.2}
+        sectionSize={1}
+        fadeDistance={15}
       />
       
       {/* Ground plane - invisible but still receives shadows */}
@@ -250,8 +232,7 @@ function Scene({
         </mesh>
       )}
 
-      {/* Remove debug sphere and update Environment */}
-      <Environment preset="city" />
+      <Environment preset="park" />
     </>
   )
 }
@@ -272,9 +253,9 @@ export function App() {
   // Initialize with a basic linked list for demonstration
   const initializeBasicList = useCallback(() => {
     const basicNodes = [
-      { id: 'node-1', data: 1, next: 'node-2', position: { x: -2, y: 0.5, z: 0 }},
-      { id: 'node-2', data: 3, next: 'node-3', position: { x: 0, y: 0.5, z: 0 }},
-      { id: 'node-3', data: 7, next: null, position: { x: 2, y: 0.5, z: 0 }}
+      { id: 'node-1', data: 1, next: 'node-2', position: { x: -0.8, y: 0.2, z: 0 }},
+      { id: 'node-2', data: 3, next: 'node-3', position: { x: 0, y: 0.2, z: 0 }},
+      { id: 'node-3', data: 7, next: null, position: { x: 0.8, y: 0.2, z: 0 }}
     ]
     setNodes(basicNodes)
     setNodeCounter(4)
@@ -287,7 +268,7 @@ export function App() {
       id: `node-${nodeCounter}`,
       data: nodeValue,
       next: null,
-      position: { x: 0, y: 1.5, z: -2 }, // Staging area above the list
+      position: { x: 0, y: 0.4, z: -0.6 }, // Staging area above the list
       isStaging: true
     }
     setNodes(prev => [...prev, newNode])
@@ -435,7 +416,7 @@ export function App() {
       shadows
       className="scene-canvas"
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: [0, 2, 4], fov: 75 }}
+      camera={{ position: [0, 1, 2], fov: 60 }}
     >
       <XR store={store}>
         <Scene

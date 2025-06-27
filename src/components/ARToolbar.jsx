@@ -13,25 +13,24 @@ const COLORS = {
 
 const DIMENSIONS = {
   button: {
-    width: 0.3,
-    height: 0.1,
-    depth: 0.05,
-    textSize: 0.04,
-    spacing: 0.12
+    width: 0.15,
+    height: 0.05,
+    depth: 0.02,
+    textSize: 0.02,
+    spacing: 0.06
   },
   toolbar: {
-    width: 0.8,
-    height: 0.4,
-    depth: 0.02,
-    titleSize: 0.05
+    width: 0.4,
+    height: 0.25,
+    depth: 0.01,
+    titleSize: 0.025
   }
 }
 
 const MATERIAL = {
-  metalness: 0.5,
-  roughness: 0.5,
-  opacity: 0.9,
-  toolbarOpacity: 0.8
+  metalness: 0.3,
+  roughness: 0.7,
+  opacity: 1.0
 }
 
 function ARButton({
@@ -72,10 +71,6 @@ function ARButton({
           color={hovered ? COLORS.white : color}
           metalness={MATERIAL.metalness}
           roughness={MATERIAL.roughness}
-          transparent
-          opacity={MATERIAL.opacity}
-          emissive={hovered ? color : COLORS.white}
-          emissiveIntensity={0.3}
         />
       </mesh>
       <Text
@@ -119,12 +114,8 @@ export function ARToolbar({
         ]} />
         <meshStandardMaterial
           color={COLORS.background}
-          opacity={1.0}
-          transparent={false}
           metalness={MATERIAL.metalness}
           roughness={MATERIAL.roughness}
-          emissive={COLORS.background}
-          emissiveIntensity={0.5}
         />
       </mesh>
 

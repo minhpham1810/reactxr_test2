@@ -4,15 +4,13 @@ import { ExerciseModal } from './ExerciseModal'
 import { ModalBackdrop } from './ModalBackdrop'
 
 const buttonStyle = {
-  padding: '8px 16px',
+  padding: '6px 12px',
   color: 'white',
   border: 'none',
-  borderRadius: '4px',
+  borderRadius: '3px',
   cursor: 'pointer',
   fontSize: '14px',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
+  margin: '4px 0'
 }
 
 export function Toolbar({ 
@@ -52,19 +50,17 @@ export function Toolbar({
         left: '20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
-        background: 'rgba(255, 255, 255, 0.9)',
-        padding: '15px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        gap: '4px',
+        background: 'white',
+        padding: '12px',
+        borderRadius: '4px',
         zIndex: 1000,
       }}>
         <div style={{
-          marginBottom: '15px',
-          padding: '10px',
+          marginBottom: '10px',
+          padding: '8px',
           background: exerciseMode ? '#e3f2fd' : '#f5f5f5',
-          borderRadius: '6px',
-          border: exerciseMode ? '2px solid #2196F3' : '1px solid #ddd'
+          borderRadius: '4px'
         }}>
           <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
             {exerciseMode ? `Exercise: ${exerciseMode.toUpperCase()}` : 'Linked List Authoring Tool'}
