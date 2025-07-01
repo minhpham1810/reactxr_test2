@@ -4,7 +4,8 @@ import { useState, useRef } from 'react'
 import { XR, createXRStore, useXR, XRHitTest, Interactive } from '@react-three/xr'
 import './App.css'
 import { Matrix4, Vector3 } from 'three'
-
+import { getCompartmentPos, getNearestCompartment, checkSorted } from './sortHelpers';
+import GeminiAPI from './gemini.js';
 // Helper to generate a random array
 function randomArray(length = 6, min = 1, max = 9) {
   return Array.from({ length }, () => Math.floor(Math.random() * (max - min + 1)) + min)
@@ -287,37 +288,42 @@ export function App() {
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+    <div className="app-root">
       <Canvas
         shadows
         className="scene-canvas"
         gl={{ antialias: true, alpha: true }}
         camera={{ position: [0, 1.2, 2.2], fov: 60 }}
-        style={{ background: '#181a20', width: '100vw', height: '100vh', display: 'block' }}
+        style={{}}
       >
         <XR store={store}>
           <XRStatus />
-          {/* Enter AR button as Html overlay, only when not in AR */}
           {!isPresenting && (
-            <Html center style={{ pointerEvents: 'auto' }}>
-              <button
-                onClick={handleEnterAR}
-                style={{ fontSize: 20, padding: '12px 32px', borderRadius: 10, background: '#4caf50', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-              >
+            <Html center className="ar-enter-html">
+              <button className="ar-enter-btn" onClick={handleEnterAR}>
                 Enter AR
               </button>
             </Html>
           )}
-          {/* AR-only Exit AR button */}
           {isPresenting && (
-            <Html center style={{ pointerEvents: 'auto', top: 24 }}>
-              <button
+            <group position={[0, 2.0, -1]}>
+              <mesh
+                position={[0, 0, 0]}
                 onClick={handleExitAR}
-                style={{ fontSize: 20, padding: '12px 32px', borderRadius: 10, background: '#e53935', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}
               >
-                Exit AR
-              </button>
-            </Html>
+                <boxGeometry args={[1.2, 0.32, 0.08]} />
+                <meshStandardMaterial color="#e53935" />
+                <Text
+                  position={[0, 0, 0.06]}
+                  fontSize={0.18}
+                  color="#fff"
+                  anchorX="center"
+                  anchorY="middle"
+                >
+                  Exit AR
+                </Text>
+              </mesh>
+            </group>
           )}
           <ambientLight intensity={0.7} />
           <directionalLight position={[2, 4, 2]} intensity={1.1} />
@@ -375,21 +381,15 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
 
   // AR drag state
   const [arDraggingIdx, setArDraggingIdx] = useState(null)
-  const [arDragPos, setArDragPos] = useState(null)
   const [arIsDragging, setArIsDragging] = useState(false)
   const [hitPos, setHitPos] = useState(null)
   const matrixHelper = useRef(new Matrix4())
-
-  // XRHitTest for AR pointer position
-  // Only active when dragging in AR
-  // This will update hitPos as the user moves their hand/controller
-  const hitTestActive = arIsDragging
 
   // Web drag handlers
   const handlePointerDown = (idx, e) => {
     e.stopPropagation()
     setDraggedIdx(idx)
-    setDragPos(getCompartmentPos(idx))
+    setDragPos(getCompartmentPos(idx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase))
     setIsDragging(true)
   }
   const handlePointerMove = (e) => {
@@ -419,35 +419,8 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     setIsDragging(false)
   }
 
-  const getCompartmentPos = (idx) => ([
-    -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
-    yBase + 0.18 * SCENE_SCALE,
-    zBase
-  ])
-
-  const getNearestCompartment = (x) => {
-    let minDist = Infinity
-    let minIdx = 0
-    for (let i = 0; i < array.length; i++) {
-      const cx = -boxWidth / 2 + compartmentWidth / 2 + i * compartmentWidth
-      const dist = Math.abs(x - cx)
-      if (dist < minDist) {
-        minDist = dist
-        minIdx = i
-      }
-    }
-    return minIdx
-  }
-
-  const checkSorted = (arr) => {
-    for (let i = 1; i < arr.length; i++) {
-      if (arr[i] < arr[i - 1]) return false
-    }
-    return true
-  }
-
   const handleDrop = (idx, pos) => {
-    const nearestIdx = getNearestCompartment(pos[0])
+    const nearestIdx = getNearestCompartment(pos[0], array.length, boxWidth, compartmentWidth)
     if (nearestIdx === idx) {
       setDraggedIdx(null)
       setDragPos(null)
@@ -462,12 +435,32 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     setDraggedIdx(null)
     setDragPos(null)
     // Check correctness
-    if (checkSorted(newArr)) {
+    const sorted = checkSorted(newArr)
+    if (sorted) {
       setFeedback('Correct! The array is sorted.')
     } else {
       setFeedback('Keep sorting!')
     }
   }
+
+  // Gemini suggestion loading state
+  const [loadingSuggestion, setLoadingSuggestion] = useState(false)
+
+  // Async function to call Google Gemini API using imported GeminiAPI
+  async function getGeminiSuggestion(array) {
+    try {
+      const suggestion = await GeminiAPI.generateSortSuggestion(array)
+      return suggestion || 'No suggestion available.'
+    } catch (err) {
+      return 'Error fetching suggestion.'
+    }
+  }
+
+  // Padding values
+  const FEEDBACK_BOX_WIDTH = 2.0 * SCENE_SCALE;
+  const FEEDBACK_BOX_HEIGHT = 0.7 * SCENE_SCALE;
+  const FEEDBACK_BOX_DEPTH = 0.04 * SCENE_SCALE;
+  const FEEDBACK_TEXT_PADDING = 0.12 * SCENE_SCALE;
 
   return (
     <>
@@ -483,18 +476,18 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
         />
       )}
       {/* Virtual window for feedback */}
-      <group position={[0, yBase + 0.6 * SCENE_SCALE, zBase]}>
+      <group position={[(boxWidth/2) + FEEDBACK_BOX_WIDTH/2 + 0.2 * SCENE_SCALE, yBase + 0.18 * SCENE_SCALE, zBase]}>
         <mesh>
-          <boxGeometry args={[2.2 * SCENE_SCALE, 0.32 * SCENE_SCALE, 0.04 * SCENE_SCALE]} />
+          <boxGeometry args={[FEEDBACK_BOX_WIDTH, FEEDBACK_BOX_HEIGHT, FEEDBACK_BOX_DEPTH]} />
           <meshStandardMaterial color="#23283a" opacity={0.92} transparent />
         </mesh>
         <Text
-          position={[0, 0, 0.04 * SCENE_SCALE]}
-          fontSize={0.15 * SCENE_SCALE}
+          position={[-FEEDBACK_BOX_WIDTH/2 + FEEDBACK_TEXT_PADDING, 0, FEEDBACK_BOX_DEPTH/2 + 0.001]}
+          fontSize={0.13 * SCENE_SCALE}
           color="#fff"
-          anchorX="center"
+          anchorX="left"
           anchorY="middle"
-          maxWidth={2.0 * SCENE_SCALE}
+          maxWidth={FEEDBACK_BOX_WIDTH - 2 * FEEDBACK_TEXT_PADDING}
         >
           {feedback || 'Drag and drop the spheres to sort the array!'}
         </Text>
@@ -538,7 +531,7 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
         // AR: use hitPos if this sphere is being dragged in AR
         const pos = arIsDragging && arDraggingIdx === idx && hitPos
           ? hitPos
-          : (draggedIdx === idx && dragPos ? dragPos : getCompartmentPos(idx))
+          : (draggedIdx === idx && dragPos ? dragPos : getCompartmentPos(idx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase))
         return (
           <Interactive
             key={idx + '-sphere'}
@@ -569,11 +562,11 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
           </Interactive>
         )
       })}
-      {/* 3D Undo and Reset Buttons */}
+      {/* 3D Undo, Reset, and Suggestion Buttons */}
       <group position={[0, yBase - 0.5 * SCENE_SCALE, zBase]}>
         {/* Undo Button */}
         <mesh
-          position={[-0.5 * SCENE_SCALE, 0, 0]}
+          position={[-1.0 * SCENE_SCALE, 0, 0]}
           onClick={undo}
         >
           <boxGeometry args={[0.7 * SCENE_SCALE, 0.18 * SCENE_SCALE, 0.08 * SCENE_SCALE]} />
@@ -590,7 +583,7 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
         </mesh>
         {/* Reset Button */}
         <mesh
-          position={[0.5 * SCENE_SCALE, 0, 0]}
+          position={[0, 0, 0]}
           onClick={reset}
         >
           <boxGeometry args={[0.7 * SCENE_SCALE, 0.18 * SCENE_SCALE, 0.08 * SCENE_SCALE]} />
@@ -603,6 +596,30 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
             anchorY="middle"
           >
             Reset
+          </Text>
+        </mesh>
+        {/* Suggestion Button */}
+        <mesh
+          position={[1.0 * SCENE_SCALE, 0, 0]}
+          onClick={async () => {
+            if (loadingSuggestion) return
+            setLoadingSuggestion(true)
+            setFeedback('Loading suggestion...')
+            const suggestion = await getGeminiSuggestion(array)
+            setFeedback(suggestion)
+            setLoadingSuggestion(false)
+          }}
+        >
+          <boxGeometry args={[0.9 * SCENE_SCALE, 0.18 * SCENE_SCALE, 0.08 * SCENE_SCALE]} />
+          <meshStandardMaterial color={loadingSuggestion ? '#888' : '#4caf50'} />
+          <Text
+            position={[0, 0, 0.06 * SCENE_SCALE]}
+            fontSize={0.11 * SCENE_SCALE}
+            color="#fff"
+            anchorX="center"
+            anchorY="middle"
+          >
+            {loadingSuggestion ? 'Loading...' : 'AI Suggestion'}
           </Text>
         </mesh>
       </group>

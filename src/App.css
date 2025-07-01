@@ -48,3 +48,32 @@ body, #root {
     height: 100vh;
   }
 }
+
+.app-root {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.scene-canvas {
+  background: #181a20;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+
+.ar-enter-html {
+  pointer-events: auto;
+}
+
+.ar-enter-btn {
+  font-size: 20px;
+  padding: 12px 32px;
+  border-radius: 10px;
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
