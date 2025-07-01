@@ -1,8 +1,9 @@
 import { Canvas } from '@react-three/fiber'
 import { Environment, OrbitControls, Text, Html } from '@react-three/drei'
-import { useState } from 'react'
-import { XR, createXRStore, useXR } from '@react-three/xr'
+import { useState, useRef } from 'react'
+import { XR, createXRStore, useXR, XRHitTest, Interactive } from '@react-three/xr'
 import './App.css'
+import { Matrix4, Vector3 } from 'three'
 
 // Helper to generate a random array
 function randomArray(length = 6, min = 1, max = 9) {
@@ -85,6 +86,23 @@ function InsertionSortVisualizer({
           <boxGeometry args={[compartmentWidth * 0.98, boxHeight * 0.96, boxDepth * 1.01]} />
           <meshStandardMaterial color="#2e3a4d" />
         </mesh>
+      ))}
+      {/* 0-indexed indices under the array */}
+      {array.map((_, idx) => (
+        <Text
+          key={'idx-label-' + idx}
+          position={[
+            -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
+            yBase - 0.16 * SCENE_SCALE,
+            zBase + 0.03 * SCENE_SCALE
+          ]}
+          fontSize={0.11 * SCENE_SCALE}
+          color="#fff"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {idx}
+        </Text>
       ))}
       {/* Spheres as elements */}
       {array.map((value, idx) => {
@@ -171,6 +189,7 @@ export function App() {
   const [exerciseArray, setExerciseArray] = useState(randomArray())
   const [moveHistory, setMoveHistory] = useState([])
   const [exerciseFeedback, setExerciseFeedback] = useState('')
+  const [isDragging, setIsDragging] = useState(false)
 
   // Step through insertion sort (Demo Mode)
   const nextStep = () => {
@@ -302,7 +321,7 @@ export function App() {
           )}
           <ambientLight intensity={0.7} />
           <directionalLight position={[2, 4, 2]} intensity={1.1} />
-          <OrbitControls enablePan={false} enableZoom={true} enableRotate={true} minDistance={1.2} maxDistance={6} target={[0, 1.2, -1]} />
+          <OrbitControls enabled={!isDragging} enablePan={false} enableZoom={true} enableRotate={true} minDistance={1.2} maxDistance={6} target={[0, 1.2, -1]} />
           {/* 3D Mode Toggle Button */}
           {renderModeToggle(0.7)}
           {/* Main Visualizer: Demo or Exercise Mode */}
@@ -326,6 +345,7 @@ export function App() {
               setFeedback={setExerciseFeedback}
               undo={undoExercise}
               reset={reset}
+              setIsDragging={setIsDragging}
             />
           )}
           <Environment preset="park" />
@@ -336,7 +356,7 @@ export function App() {
 }
 
 // Scaffold ExerciseSortVisualizer for Exercise Mode
-function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, feedback, setFeedback, undo, reset }) {
+function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, feedback, setFeedback, undo, reset, setIsDragging }) {
   // Use the same SCENE_SCALE as the demo
   const SCENE_SCALE = 0.7
   const compartmentCount = array.length
@@ -347,10 +367,121 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
   const yBase = 1.2 * SCENE_SCALE
   const zBase = -1 * SCENE_SCALE
 
-  // TODO: Implement drag-and-drop logic
+  // Drag state
+  const [draggedIdx, setDraggedIdx] = useState(null)
+  const [dragPos, setDragPos] = useState(null)
+  const dragging = draggedIdx !== null
+  const meshRefs = useRef([])
+
+  // AR drag state
+  const [arDraggingIdx, setArDraggingIdx] = useState(null)
+  const [arDragPos, setArDragPos] = useState(null)
+  const [arIsDragging, setArIsDragging] = useState(false)
+  const [hitPos, setHitPos] = useState(null)
+  const matrixHelper = useRef(new Matrix4())
+
+  // XRHitTest for AR pointer position
+  // Only active when dragging in AR
+  // This will update hitPos as the user moves their hand/controller
+  const hitTestActive = arIsDragging
+
+  // Web drag handlers
+  const handlePointerDown = (idx, e) => {
+    e.stopPropagation()
+    setDraggedIdx(idx)
+    setDragPos(getCompartmentPos(idx))
+    setIsDragging(true)
+  }
+  const handlePointerMove = (e) => {
+    if (!dragging) return
+    // Use e.point for accurate 3D cursor tracking
+    const x = e.point.x
+    setDragPos([x, yBase + 0.18 * SCENE_SCALE, zBase])
+  }
+  const handlePointerUp = (e) => {
+    if (!dragging) return
+    handleDrop(draggedIdx, dragPos)
+    setIsDragging(false)
+  }
+
+  // AR drag handlers using Interactive and XRHitTest
+  const handleARSelectStart = (idx) => {
+    setArDraggingIdx(idx)
+    setArIsDragging(true)
+  }
+  const handleARSelectEnd = () => {
+    if (arDraggingIdx !== null && hitPos) {
+      handleDrop(arDraggingIdx, hitPos)
+    }
+    setArDraggingIdx(null)
+    setArIsDragging(false)
+    setHitPos(null)
+    setIsDragging(false)
+  }
+
+  const getCompartmentPos = (idx) => ([
+    -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
+    yBase + 0.18 * SCENE_SCALE,
+    zBase
+  ])
+
+  const getNearestCompartment = (x) => {
+    let minDist = Infinity
+    let minIdx = 0
+    for (let i = 0; i < array.length; i++) {
+      const cx = -boxWidth / 2 + compartmentWidth / 2 + i * compartmentWidth
+      const dist = Math.abs(x - cx)
+      if (dist < minDist) {
+        minDist = dist
+        minIdx = i
+      }
+    }
+    return minIdx
+  }
+
+  const checkSorted = (arr) => {
+    for (let i = 1; i < arr.length; i++) {
+      if (arr[i] < arr[i - 1]) return false
+    }
+    return true
+  }
+
+  const handleDrop = (idx, pos) => {
+    const nearestIdx = getNearestCompartment(pos[0])
+    if (nearestIdx === idx) {
+      setDraggedIdx(null)
+      setDragPos(null)
+      return
+    }
+    // Move sphere from idx to nearestIdx
+    const newArr = [...array]
+    const [moved] = newArr.splice(idx, 1)
+    newArr.splice(nearestIdx, 0, moved)
+    setMoveHistory([...moveHistory, { array }])
+    setArray(newArr)
+    setDraggedIdx(null)
+    setDragPos(null)
+    // Check correctness
+    if (checkSorted(newArr)) {
+      setFeedback('Correct! The array is sorted.')
+    } else {
+      setFeedback('Keep sorting!')
+    }
+  }
 
   return (
     <>
+      {/* XRHitTest for AR drag-and-drop */}
+      {arIsDragging && (
+        <XRHitTest
+          onResults={(results, getWorldMatrix) => {
+            if (results.length === 0) return
+            getWorldMatrix(matrixHelper.current, results[0])
+            const pos = new Vector3().setFromMatrixPosition(matrixHelper.current)
+            setHitPos([pos.x, yBase + 0.18 * SCENE_SCALE, zBase])
+          }}
+        />
+      )}
       {/* Virtual window for feedback */}
       <group position={[0, yBase + 0.6 * SCENE_SCALE, zBase]}>
         <mesh>
@@ -384,30 +515,60 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
           <meshStandardMaterial color="#2e3a4d" />
         </mesh>
       ))}
-      {/* Spheres as elements (draggable UI only for now) */}
-      {array.map((value, idx) => (
-        <mesh
-          key={idx + '-sphere'}
+      {/* 0-indexed indices under the array */}
+      {array.map((_, idx) => (
+        <Text
+          key={'idx-label-' + idx}
           position={[
             -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
-            yBase + 0.18 * SCENE_SCALE,
-            zBase
+            yBase - 0.16 * SCENE_SCALE,
+            zBase + 0.03 * SCENE_SCALE
           ]}
-          scale={1 * SCENE_SCALE}
+          fontSize={0.11 * SCENE_SCALE}
+          color="#fff"
+          anchorX="center"
+          anchorY="middle"
         >
-          <sphereGeometry args={[0.11 * SCENE_SCALE, 32, 32]} />
-          <meshStandardMaterial color={'#2196f3'} />
-          <Text
-            position={[0, 0, 0.13 * SCENE_SCALE]}
-            fontSize={0.13 * SCENE_SCALE}
-            color="#fff"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {value}
-          </Text>
-        </mesh>
+          {idx}
+        </Text>
       ))}
+      {/* Spheres as elements (draggable) */}
+      {array.map((value, idx) => {
+        const isDragged = draggedIdx === idx || arDraggingIdx === idx
+        // AR: use hitPos if this sphere is being dragged in AR
+        const pos = arIsDragging && arDraggingIdx === idx && hitPos
+          ? hitPos
+          : (draggedIdx === idx && dragPos ? dragPos : getCompartmentPos(idx))
+        return (
+          <Interactive
+            key={idx + '-sphere'}
+            onSelectStart={() => handleARSelectStart(idx)}
+            onSelectEnd={handleARSelectEnd}
+          >
+            <mesh
+              ref={el => meshRefs.current[idx] = el}
+              position={pos}
+              scale={1 * SCENE_SCALE}
+              onPointerDown={e => handlePointerDown(idx, e)}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              castShadow
+            >
+              <sphereGeometry args={[0.11 * SCENE_SCALE, 32, 32]} />
+              <meshStandardMaterial color={isDragged ? '#FFC107' : '#2196f3'} />
+              <Text
+                position={[0, 0, 0.13 * SCENE_SCALE]}
+                fontSize={0.13 * SCENE_SCALE}
+                color="#fff"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {value}
+              </Text>
+            </mesh>
+          </Interactive>
+        )
+      })}
       {/* 3D Undo and Reset Buttons */}
       <group position={[0, yBase - 0.5 * SCENE_SCALE, zBase]}>
         {/* Undo Button */}
