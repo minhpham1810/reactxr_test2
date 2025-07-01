@@ -14,14 +14,16 @@ const store = createXRStore({ frameRate: 90, foveation: 1 })
 function InsertionSortVisualizer({
   array, i, j, isSorting, done, nextStep, reset
 }) {
+  // Scale factor for the whole scene
+  const SCENE_SCALE = 0.7
   // Visual parameters
   const compartmentCount = array.length
-  const boxWidth = 2.4
-  const boxHeight = 0.18
-  const boxDepth = 0.3
+  const boxWidth = 2.4 * SCENE_SCALE
+  const boxHeight = 0.18 * SCENE_SCALE
+  const boxDepth = 0.3 * SCENE_SCALE
   const compartmentWidth = boxWidth / compartmentCount
-  const yBase = 1.2
-  const zBase = -1
+  const yBase = 1.2 * SCENE_SCALE
+  const zBase = -1 * SCENE_SCALE
 
   // Explanation for current step
   let explanation = ''
@@ -40,11 +42,11 @@ function InsertionSortVisualizer({
   }
 
   // 3D Controls (Next Step, Reset) as clickable meshes
-  const buttonY = yBase - 0.5
+  const buttonY = yBase - 0.5 * SCENE_SCALE
   const buttonZ = zBase
-  const buttonWidth = 0.7
-  const buttonHeight = 0.18
-  const buttonGap = 0.3
+  const buttonWidth = 0.7 * SCENE_SCALE
+  const buttonHeight = 0.18 * SCENE_SCALE
+  const buttonGap = 0.3 * SCENE_SCALE
 
   // Helper for button background color
   const buttonColor = (disabled) => disabled ? '#555a6a' : '#222a38'
@@ -52,18 +54,18 @@ function InsertionSortVisualizer({
   return (
     <>
       {/* Virtual window for explanation */}
-      <group position={[0, yBase + 0.6, zBase]}>
+      <group position={[0, yBase + 0.6 * SCENE_SCALE, zBase]}>
         <mesh>
-          <boxGeometry args={[2.2, 0.32, 0.04]} />
+          <boxGeometry args={[2.2 * SCENE_SCALE, 0.32 * SCENE_SCALE, 0.04 * SCENE_SCALE]} />
           <meshStandardMaterial color="#23283a" opacity={0.92} transparent />
         </mesh>
         <Text
-          position={[0, 0, 0.04]}
-          fontSize={0.15}
+          position={[0, 0, 0.04 * SCENE_SCALE]}
+          fontSize={0.15 * SCENE_SCALE}
           color="#fff"
           anchorX="center"
           anchorY="middle"
-          maxWidth={2.0}
+          maxWidth={2.0 * SCENE_SCALE}
         >
           {explanation}
         </Text>
@@ -78,7 +80,7 @@ function InsertionSortVisualizer({
         <mesh key={idx} position={[
           -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
           yBase,
-          zBase + 0.001
+          zBase + 0.001 * SCENE_SCALE
         ]}>
           <boxGeometry args={[compartmentWidth * 0.98, boxHeight * 0.96, boxDepth * 1.01]} />
           <meshStandardMaterial color="#2e3a4d" />
@@ -94,18 +96,18 @@ function InsertionSortVisualizer({
             key={idx + '-sphere'}
             position={[
               -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
-              yBase + 0.18,
+              yBase + 0.18 * SCENE_SCALE,
               zBase
             ]}
-            scale={highlight ? 1.15 : 1}
+            scale={highlight ? 1.15 * SCENE_SCALE : 1 * SCENE_SCALE}
             castShadow
           >
-            <sphereGeometry args={[0.11, 32, 32]} />
+            <sphereGeometry args={[0.11 * SCENE_SCALE, 32, 32]} />
             <meshStandardMaterial color={highlight ? '#f9d923' : sorted ? '#4caf50' : '#2196f3'} />
             {/* Value label */}
             <Text
-              position={[0, 0, 0.13]}
-              fontSize={0.13}
+              position={[0, 0, 0.13 * SCENE_SCALE]}
+              fontSize={0.13 * SCENE_SCALE}
               color="#fff"
               anchorX="center"
               anchorY="middle"
@@ -122,11 +124,11 @@ function InsertionSortVisualizer({
           position={[-buttonWidth / 2 - buttonGap / 2, 0, 0]}
           onClick={() => { if (!done) nextStep() }}
         >
-          <boxGeometry args={[buttonWidth, buttonHeight, 0.08]} />
+          <boxGeometry args={[buttonWidth, buttonHeight, 0.08 * SCENE_SCALE]} />
           <meshStandardMaterial color={buttonColor(done)} />
           <Text
-            position={[0, 0, 0.06]}
-            fontSize={0.11}
+            position={[0, 0, 0.06 * SCENE_SCALE]}
+            fontSize={0.11 * SCENE_SCALE}
             color="#fff"
             anchorX="center"
             anchorY="middle"
@@ -139,11 +141,11 @@ function InsertionSortVisualizer({
           position={[buttonWidth / 2 + buttonGap / 2, 0, 0]}
           onClick={reset}
         >
-          <boxGeometry args={[buttonWidth, buttonHeight, 0.08]} />
+          <boxGeometry args={[buttonWidth, buttonHeight, 0.08 * SCENE_SCALE]} />
           <meshStandardMaterial color={'#2e3a4d'} />
           <Text
-            position={[0, 0, 0.06]}
-            fontSize={0.11}
+            position={[0, 0, 0.06 * SCENE_SCALE]}
+            fontSize={0.11 * SCENE_SCALE}
             color="#fff"
             anchorX="center"
             anchorY="middle"
@@ -165,8 +167,12 @@ export function App() {
   const [isSorting, setIsSorting] = useState(false)
   const [done, setDone] = useState(false)
   const [isPresenting, setIsPresenting] = useState(false)
+  const [mode, setMode] = useState('demo') // 'demo' or 'exercise'
+  const [exerciseArray, setExerciseArray] = useState(randomArray())
+  const [moveHistory, setMoveHistory] = useState([])
+  const [exerciseFeedback, setExerciseFeedback] = useState('')
 
-  // Step through insertion sort
+  // Step through insertion sort (Demo Mode)
   const nextStep = () => {
     if (done) return
     let arr = [...array]
@@ -208,7 +214,42 @@ export function App() {
     setJ(1)
     setIsSorting(false)
     setDone(false)
+    setExerciseArray(randomArray())
+    setMoveHistory([])
+    setExerciseFeedback('')
   }
+
+  // Undo for Exercise Mode
+  const undoExercise = () => {
+    if (moveHistory.length > 0) {
+      const prev = moveHistory[moveHistory.length - 1]
+      setExerciseArray(prev.array)
+      setMoveHistory(moveHistory.slice(0, -1))
+      setExerciseFeedback('')
+    }
+  }
+
+  // 3D Mode Toggle Button
+  const renderModeToggle = (SCENE_SCALE) => (
+    <group position={[0, 2.1 * SCENE_SCALE, -1 * SCENE_SCALE]}>
+      <mesh
+        onClick={() => setMode(mode === 'demo' ? 'exercise' : 'demo')}
+        scale={[1.2 * SCENE_SCALE, 0.4 * SCENE_SCALE, 0.1 * SCENE_SCALE]}
+      >
+        <boxGeometry args={[1, 0.32, 0.08]} />
+        <meshStandardMaterial color={mode === 'demo' ? '#2196f3' : '#f9d923'} />
+        <Text
+          position={[0, 0, 0.06 * SCENE_SCALE]}
+          fontSize={0.16 * SCENE_SCALE}
+          color="#fff"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {mode === 'demo' ? 'Switch to Exercise' : 'Switch to Demo'}
+        </Text>
+      </mesh>
+    </group>
+  )
 
   // AR enter/exit logic
   const handleEnterAR = () => {
@@ -262,19 +303,149 @@ export function App() {
           <ambientLight intensity={0.7} />
           <directionalLight position={[2, 4, 2]} intensity={1.1} />
           <OrbitControls enablePan={false} enableZoom={true} enableRotate={true} minDistance={1.2} maxDistance={6} target={[0, 1.2, -1]} />
-          <InsertionSortVisualizer
-            array={array}
-            i={i}
-            j={j}
-            isSorting={isSorting}
-            done={done}
-            nextStep={nextStep}
-            reset={reset}
-          />
+          {/* 3D Mode Toggle Button */}
+          {renderModeToggle(0.7)}
+          {/* Main Visualizer: Demo or Exercise Mode */}
+          {mode === 'demo' ? (
+            <InsertionSortVisualizer
+              array={array}
+              i={i}
+              j={j}
+              isSorting={isSorting}
+              done={done}
+              nextStep={nextStep}
+              reset={reset}
+            />
+          ) : (
+            <ExerciseSortVisualizer
+              array={exerciseArray}
+              setArray={setExerciseArray}
+              moveHistory={moveHistory}
+              setMoveHistory={setMoveHistory}
+              feedback={exerciseFeedback}
+              setFeedback={setExerciseFeedback}
+              undo={undoExercise}
+              reset={reset}
+            />
+          )}
           <Environment preset="park" />
         </XR>
       </Canvas>
     </div>
+  )
+}
+
+// Scaffold ExerciseSortVisualizer for Exercise Mode
+function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, feedback, setFeedback, undo, reset }) {
+  // Use the same SCENE_SCALE as the demo
+  const SCENE_SCALE = 0.7
+  const compartmentCount = array.length
+  const boxWidth = 2.4 * SCENE_SCALE
+  const boxHeight = 0.18 * SCENE_SCALE
+  const boxDepth = 0.3 * SCENE_SCALE
+  const compartmentWidth = boxWidth / compartmentCount
+  const yBase = 1.2 * SCENE_SCALE
+  const zBase = -1 * SCENE_SCALE
+
+  // TODO: Implement drag-and-drop logic
+
+  return (
+    <>
+      {/* Virtual window for feedback */}
+      <group position={[0, yBase + 0.6 * SCENE_SCALE, zBase]}>
+        <mesh>
+          <boxGeometry args={[2.2 * SCENE_SCALE, 0.32 * SCENE_SCALE, 0.04 * SCENE_SCALE]} />
+          <meshStandardMaterial color="#23283a" opacity={0.92} transparent />
+        </mesh>
+        <Text
+          position={[0, 0, 0.04 * SCENE_SCALE]}
+          fontSize={0.15 * SCENE_SCALE}
+          color="#fff"
+          anchorX="center"
+          anchorY="middle"
+          maxWidth={2.0 * SCENE_SCALE}
+        >
+          {feedback || 'Drag and drop the spheres to sort the array!'}
+        </Text>
+      </group>
+      {/* Array box with compartments */}
+      <mesh position={[0, yBase, zBase]}>
+        <boxGeometry args={[boxWidth, boxHeight, boxDepth]} />
+        <meshStandardMaterial color="#222a38" />
+      </mesh>
+      {/* Compartments */}
+      {array.map((_, idx) => (
+        <mesh key={idx} position={[
+          -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
+          yBase,
+          zBase + 0.001 * SCENE_SCALE
+        ]}>
+          <boxGeometry args={[compartmentWidth * 0.98, boxHeight * 0.96, boxDepth * 1.01]} />
+          <meshStandardMaterial color="#2e3a4d" />
+        </mesh>
+      ))}
+      {/* Spheres as elements (draggable UI only for now) */}
+      {array.map((value, idx) => (
+        <mesh
+          key={idx + '-sphere'}
+          position={[
+            -boxWidth / 2 + compartmentWidth / 2 + idx * compartmentWidth,
+            yBase + 0.18 * SCENE_SCALE,
+            zBase
+          ]}
+          scale={1 * SCENE_SCALE}
+        >
+          <sphereGeometry args={[0.11 * SCENE_SCALE, 32, 32]} />
+          <meshStandardMaterial color={'#2196f3'} />
+          <Text
+            position={[0, 0, 0.13 * SCENE_SCALE]}
+            fontSize={0.13 * SCENE_SCALE}
+            color="#fff"
+            anchorX="center"
+            anchorY="middle"
+          >
+            {value}
+          </Text>
+        </mesh>
+      ))}
+      {/* 3D Undo and Reset Buttons */}
+      <group position={[0, yBase - 0.5 * SCENE_SCALE, zBase]}>
+        {/* Undo Button */}
+        <mesh
+          position={[-0.5 * SCENE_SCALE, 0, 0]}
+          onClick={undo}
+        >
+          <boxGeometry args={[0.7 * SCENE_SCALE, 0.18 * SCENE_SCALE, 0.08 * SCENE_SCALE]} />
+          <meshStandardMaterial color={'#FFC107'} />
+          <Text
+            position={[0, 0, 0.06 * SCENE_SCALE]}
+            fontSize={0.11 * SCENE_SCALE}
+            color="#23283a"
+            anchorX="center"
+            anchorY="middle"
+          >
+            Undo
+          </Text>
+        </mesh>
+        {/* Reset Button */}
+        <mesh
+          position={[0.5 * SCENE_SCALE, 0, 0]}
+          onClick={reset}
+        >
+          <boxGeometry args={[0.7 * SCENE_SCALE, 0.18 * SCENE_SCALE, 0.08 * SCENE_SCALE]} />
+          <meshStandardMaterial color={'#2e3a4d'} />
+          <Text
+            position={[0, 0, 0.06 * SCENE_SCALE]}
+            fontSize={0.11 * SCENE_SCALE}
+            color="#fff"
+            anchorX="center"
+            anchorY="middle"
+          >
+            Reset
+          </Text>
+        </mesh>
+      </group>
+    </>
   )
 }
 
