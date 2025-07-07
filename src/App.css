@@ -76,4 +76,6 @@ body, #root {
   border: none;
   cursor: pointer;
   font-weight: 600;
+  width: 150px;
+  height: auto;
 }

@@ -1,20 +1,95 @@
 import { Text } from '@react-three/drei'
-import React from 'react'
-
+import React, { useState, useEffect } from 'react'
+import { getExercises, saveExercise, updateExercise, deleteExercise } from './helpers'
 
 export function AuthoringPanel3D({
-    authoringMode, setAuthoringMode,
-    lesson, setLesson,
-    selectedExerciseIdx, setSelectedExerciseIdx
-  }) {
+    authoringMode, setAuthoringMode, selectedExercise, setSelectedExercise
+}) {
     // Panel position
     const panelPos = [-1.5, 2.2, -1]
-    const panelWidth = 2.8
-    const panelHeight = 1.7
+    const panelWidth = 2.0
+    const panelHeight = 1.5
     const panelDepth = 0.05
   
+    // Flat exercises state
+    const [exercises, setExercises] = useState([])
+    const [selectedExerciseId, setSelectedExerciseId] = useState(null)
+    const [loading, setLoading] = useState(false)
+    const [feedback, setFeedback] = useState('')
+    const [exerciseScrollOffset, setExerciseScrollOffset] = useState(0)
+    const VISIBLE_EXERCISES = 5
+    const canScrollUp = exerciseScrollOffset > 0
+    const canScrollDown = exercises.length > VISIBLE_EXERCISES && (exerciseScrollOffset + VISIBLE_EXERCISES) < exercises.length
+  
+    // Load exercises from backend
+    useEffect(() => {
+      refreshExercises()
+    }, [])
+    async function refreshExercises() {
+      setLoading(true)
+      try {
+        const data = await getExercises()
+        setExercises(data)
+        // If selectedExerciseId is set, update selectedExercise
+        if (selectedExerciseId) {
+          const found = data.find(e => e._id === selectedExerciseId)
+          setSelectedExercise(found ? { ...found } : null)
+        }
+      } catch (e) {
+        setFeedback('Error loading exercises')
+      }
+      setLoading(false)
+    }
+    // Save exercise (create or update)
+    async function handleSave() {
+      setLoading(true)
+      try {
+        if (selectedExercise && selectedExercise._id) {
+          const { _id, ...exerciseData } = selectedExercise
+          console.log('Updating exercise with:', exerciseData)
+          await updateExercise(selectedExercise._id, exerciseData)
+          setFeedback('Exercise updated!')
+        } else if (selectedExercise) {
+          const saved = await saveExercise(selectedExercise)
+          setSelectedExerciseId(saved._id)
+          setSelectedExercise(saved)
+          setFeedback('Exercise saved!')
+        }
+        refreshExercises()
+      } catch (e) {
+        setFeedback('Save failed')
+      }
+      setLoading(false)
+    }
+    // Load exercise
+    function handleLoad(id) {
+      const ex = exercises.find(e => e._id === id)
+      setSelectedExercise(ex ? { ...ex } : null)
+      setFeedback('Exercise loaded!')
+    }
+    // Delete exercise
+    async function handleDelete(id) {
+      if (!window.confirm('Delete this exercise?')) return
+      setLoading(true)
+      try {
+        await deleteExercise(id)
+        setFeedback('Exercise deleted!')
+        setSelectedExerciseId(null)
+        setSelectedExercise(null)
+        refreshExercises()
+      } catch (e) {
+        setFeedback('Delete failed')
+      }
+      setLoading(false)
+    }
+    // Add new exercise
+    function handleAddNew() {
+      setSelectedExerciseId(null)
+      setSelectedExercise({ name: '', description: '', array: [1,2,3,4] })
+      setFeedback('New exercise')
+    }
     // 3D Input Field (simulated with mesh and Text, triggers browser prompt for input)
-    function Input3D({ position, value, onChange, width = 1.2, height = 0.13, label = '', fontSize = 0.09, color = '#23283a', textColor = '#fff' }) {
+    function Input3D({ position, value, onChange, width = 1.2, height = 0.13, label = '', fontSize = 0.02, color = '#23283a', textColor = '#fff' }) {
       return (
         <group position={position}>
           <mesh
@@ -41,7 +116,7 @@ export function AuthoringPanel3D({
     }
   
     // Button helper
-    function Button3D({ position, label, onClick, width = 0.32, height = 0.13, color = '#2196f3', textColor = '#fff', fontSize = 0.09 }) {
+    function Button3D({ position, label, onClick, width = 0.32, height = 0.13, color = '#2196f3', textColor = '#fff', fontSize = 0.05 }) {
       return (
         <group position={position}>
           <mesh onClick={onClick}>
@@ -69,194 +144,189 @@ export function AuthoringPanel3D({
           <boxGeometry args={[panelWidth, panelHeight, panelDepth]} />
           <meshStandardMaterial color="#23283a" opacity={0.97} transparent />
         </mesh>
-        {/* Authoring Mode Toggle */}
-        <Button3D
-          position={[-panelWidth/2 + 0.22, panelHeight/2 - 0.18, panelDepth/2 + 0.01]}
-          label={authoringMode ? 'Authoring: ON' : 'Authoring: OFF'}
-          onClick={() => setAuthoringMode(!authoringMode)}
-          color={authoringMode ? '#4caf50' : '#888'}
-          width={0.44}
-        />
-        {/* Lesson Title Input */}
+        {/* Exercises List with Scroll */}
         <Text
-          position={[-panelWidth/2 + 0.18, panelHeight/2 - 0.38, panelDepth/2 + 0.01]}
-          fontSize={0.11}
-          color="#fff"
-          anchorX="left"
-          anchorY="middle"
-          maxWidth={1.2}
-        >
-          Title:
-        </Text>
-        <Input3D
-          position={[-panelWidth/2 + 0.7, panelHeight/2 - 0.38, panelDepth/2 + 0.01]}
-          value={lesson.title}
-          onChange={val => setLesson({ ...lesson, title: val })}
-          width={1.6}
-          label="Lesson Title"
-          fontSize={0.10}
-        />
-        {/* Lesson Description Input */}
-        <Text
-          position={[-panelWidth/2 + 0.18, panelHeight/2 - 0.58, panelDepth/2 + 0.01]}
-          fontSize={0.10}
-          color="#fff"
-          anchorX="left"
-          anchorY="middle"
-          maxWidth={1.2}
-        >
-          Description:
-        </Text>
-        <Input3D
-          position={[-panelWidth/2 + 0.7, panelHeight/2 - 0.58, panelDepth/2 + 0.01]}
-          value={lesson.description}
-          onChange={val => setLesson({ ...lesson, description: val })}
-          width={1.6}
-          label="Lesson Description"
-          fontSize={0.10}
-        />
-        {/* Exercises List */}
-        <Text
-          position={[-panelWidth/2 + 0.18, panelHeight/2 - 0.80, panelDepth/2 + 0.01]}
-          fontSize={0.10}
+          position={[-panelWidth/2 + 0.18, panelHeight/2 - 0.25, panelDepth/2 + 0.01]}
+          fontSize={0.08}
           color="#fff"
           anchorX="left"
           anchorY="middle"
         >
           Exercises:
         </Text>
-        {lesson.exercises.map((ex, idx) => (
-          <group key={idx} position={[-panelWidth/2 + 0.18, panelHeight/2 - 1.00 - idx*0.18, panelDepth/2 + 0.01]}>
-            <Text fontSize={0.09} color="#fff" anchorX="left" anchorY="middle">{`#${idx+1}`}</Text>
-            <Button3D
-              position={[0.38, 0, 0]}
-              label="Edit"
-              onClick={() => setSelectedExerciseIdx(idx)}
-              color="#2196f3"
-              width={0.22}
-              fontSize={0.07}
-            />
-            <Button3D
-              position={[0.65, 0, 0]}
-              label="Remove"
-              onClick={() => {
-                const newExercises = lesson.exercises.filter((_, i) => i !== idx)
-                setLesson({ ...lesson, exercises: newExercises })
-                if (selectedExerciseIdx === idx) setSelectedExerciseIdx(null)
-                else if (selectedExerciseIdx > idx) setSelectedExerciseIdx(selectedExerciseIdx - 1)
-              }}
-              color="#e53935"
-              width={0.28}
-              fontSize={0.07}
-            />
-          </group>
-        ))}
-        {/* Add New Exercise Button */}
+        {/* Up Arrow Button */}
         <Button3D
-          position={[-panelWidth/2 + 0.7, panelHeight/2 - 1.00 - lesson.exercises.length*0.18, panelDepth/2 + 0.01]}
-          label="Add New Exercise"
-          onClick={() => {
-            const newExercise = { array: [1,2,3,4], instructions: '' }
-            setLesson({ ...lesson, exercises: [...lesson.exercises, newExercise] })
-            setSelectedExerciseIdx(lesson.exercises.length)
-          }}
-          color="#FFC107"
-          width={0.56}
+          position={[-panelWidth/2 + 1.90, panelHeight/2 - 0.30, panelDepth/2 + 0.01]}
+          label="▲"
+          onClick={() => setExerciseScrollOffset(o => Math.max(0, o - 1))}
+          color={canScrollUp ? '#2196f3' : '#888'}
+          width={0.13}
           fontSize={0.08}
-          textColor="#23283a"
         />
-        {/* Exercise Editor */}
-        {selectedExerciseIdx !== null && lesson.exercises[selectedExerciseIdx] && (
-          <group position={[-panelWidth/2 + 0.18, panelHeight/2 - 1.38 - lesson.exercises.length*0.18, panelDepth/2 + 0.01]}>
-            {/* Array Length */}
-            <Text fontSize={0.09} color="#fff" anchorX="left" anchorY="middle" position={[0, 0, 0]}>
-              {`Array Length: ${lesson.exercises[selectedExerciseIdx].array.length}`}
-            </Text>
-            <Button3D
-              position={[1.0, 0, 0]}
-              label="+"
-              onClick={() => {
-                const arr = lesson.exercises[selectedExerciseIdx].array
-                if (arr.length < 12) {
-                  const newArr = [...arr, 1]
-                  const newExercises = lesson.exercises.map((ex, i) => i === selectedExerciseIdx ? { ...ex, array: newArr } : ex)
-                  setLesson({ ...lesson, exercises: newExercises })
-                }
-              }}
-              color="#4caf50"
-              width={0.16}
-              fontSize={0.09}
-            />
-            <Button3D
-              position={[1.18, 0, 0]}
-              label="-"
-              onClick={() => {
-                const arr = lesson.exercises[selectedExerciseIdx].array
-                if (arr.length > 2) {
-                  const newArr = arr.slice(0, arr.length - 1)
-                  const newExercises = lesson.exercises.map((ex, i) => i === selectedExerciseIdx ? { ...ex, array: newArr } : ex)
-                  setLesson({ ...lesson, exercises: newExercises })
-                }
-              }}
-              color="#e53935"
-              width={0.16}
-              fontSize={0.09}
-            />
-            {/* Array Values (vertical stack) */}
-            <group position={[0, -0.18, 0]}>
-              <Text fontSize={0.09} color="#fff" anchorX="left" anchorY="middle" position={[0, 0, 0]}>
-                Array Values:
-              </Text>
-              {lesson.exercises[selectedExerciseIdx].array.map((val, arrIdx) => (
-                <group key={arrIdx} position={[0.38 + arrIdx*0.32, 0, 0]}>
-                  <Text fontSize={0.09} color="#fff" anchorX="center" anchorY="middle" position={[0, 0.08, 0]}>{val}</Text>
-                  <Button3D
-                    position={[0, -0.04, 0]}
-                    label="+"
-                    onClick={() => {
-                      const arr = lesson.exercises[selectedExerciseIdx].array
-                      const newArr = arr.map((v, i) => i === arrIdx ? v + 1 : v)
-                      const newExercises = lesson.exercises.map((ex, i) => i === selectedExerciseIdx ? { ...ex, array: newArr } : ex)
-                      setLesson({ ...lesson, exercises: newExercises })
-                    }}
-                    color="#4caf50"
-                    width={0.16}
-                    fontSize={0.08}
-                  />
-                  <Button3D
-                    position={[0, -0.13, 0]}
-                    label="-"
-                    onClick={() => {
-                      const arr = lesson.exercises[selectedExerciseIdx].array
-                      const newArr = arr.map((v, i) => i === arrIdx ? Math.max(1, v - 1) : v)
-                      const newExercises = lesson.exercises.map((ex, i) => i === selectedExerciseIdx ? { ...ex, array: newArr } : ex)
-                      setLesson({ ...lesson, exercises: newExercises })
-                    }}
-                    color="#e53935"
-                    width={0.16}
-                    fontSize={0.08}
-                  />
-                </group>
-              ))}
-            </group>
-            {/* Instructions Input */}
-            <group position={[0, -0.38, 0]}>
-              <Text fontSize={0.09} color="#fff" anchorX="left" anchorY="middle" position={[0, 0, 0]}>
-                Instructions:
-              </Text>
-              <Input3D
-                position={[0.9, 0, 0]}
-                value={lesson.exercises[selectedExerciseIdx].instructions}
-                onChange={val => {
-                  const newExercises = lesson.exercises.map((ex, i) => i === selectedExerciseIdx ? { ...ex, instructions: val } : ex)
-                  setLesson({ ...lesson, exercises: newExercises })
-                }}
-                width={1.2}
-                label="Instructions"
-                fontSize={0.09}
+        {/* Down Arrow Button */}
+        <Button3D
+          position={[-panelWidth/2 + 1.90, panelHeight/2 - 0.40 - (VISIBLE_EXERCISES-1)*0.15, panelDepth/2 + 0.01]}
+          label="▼"
+          onClick={() => setExerciseScrollOffset(o => Math.min(exercises.length - VISIBLE_EXERCISES, o + 1))}
+          color={canScrollDown ? '#2196f3' : '#888'}
+          width={0.13}
+          fontSize={0.08}
+        />
+        {/* Visible Exercises */}
+        {exercises.slice(exerciseScrollOffset, exerciseScrollOffset + VISIBLE_EXERCISES).map((ex, idx) => {
+          const realIdx = exerciseScrollOffset + idx
+          const isSelected = selectedExercise && ex._id === selectedExercise._id
+          return (
+            <group key={ex._id} position={[-panelWidth/2 + 0.4, panelHeight/2 - 0.40 - idx*0.15, panelDepth/2 + 0.01]}>
+              <mesh>
+                <boxGeometry args={[0.75, 0.13, 0.01]} />
+                <meshStandardMaterial color={isSelected ? '#FFC107' : '#23283a'} opacity={isSelected ? 0.8 : 0.5} transparent />
+              </mesh>
+              <Text fontSize={0.07} color={isSelected ? '#23283a' : '#fff'} anchorX="left" anchorY="middle" position={[-0.35, 0, 0.02]}>{`#${realIdx+1} ${ex.name ? ' - ' + ex.name : ''}`}</Text>
+              <Button3D
+                position={[1.1, 0, 0]}
+                label="Edit"
+                onClick={() => handleLoad(ex._id)}
+                color="#2196f3"
+                width={0.18}
+                fontSize={0.04}
+              />
+              <Button3D
+                position={[1.30, 0, 0]}
+                label="Delete"
+                onClick={() => handleDelete(ex._id)}
+                color="#e53935"
+                width={0.20}
+                fontSize={0.05}
               />
             </group>
+          )
+        })}
+        {/* Add New Exercise Button */}
+        <Button3D
+          position={[-panelWidth/2 + 0.7, panelHeight/2 - 0.40 - Math.min(exercises.length, VISIBLE_EXERCISES)*0.15 - 0.08, panelDepth/2 + 0.01]}
+          label="Add New Exercise"
+          onClick={handleAddNew}
+          color="#FFC107"
+          width={0.44}
+          fontSize={0.04}
+          textColor="#23283a"
+        />
+        {/* Exercise Editor in its own panel */}
+        {selectedExercise && (
+          <group position={[panelWidth/2 + 1.0, panelHeight/2 - 0.60, panelDepth/2 + 0.01]}>
+            {/* Editor Panel Background - wider */}
+            <mesh position={[0.8, -0.25, -0.03]}>
+              <boxGeometry args={[1.8, 1.25, 0.06]} />
+              <meshStandardMaterial color="#23283a" opacity={0.98} transparent />
+            </mesh>
+            {/* Exercise Name Input */}
+            <Input3D
+              position={[0.4, 0.3, 0]}
+              value={selectedExercise.name || ''}
+              onChange={val => setSelectedExercise({ ...selectedExercise, name: val })}
+              width={1.0}
+              label="Exercise Name"
+              fontSize={0.055}
+            />
+
+            <Input3D
+              position={[0.4, 0.15, 0]}
+              value={selectedExercise.description || ''}
+              onChange={val => setSelectedExercise({ ...selectedExercise, description: val })}
+              width={1.0}
+              label="Description"
+              fontSize={0.055}
+            />
+            {/* Array Length */}
+            <group position={[0, 0, 0.03]}>
+              <Text fontSize={0.055} color="#fff" anchorX="left" anchorY="middle" position={[0, 0, 0]}>
+                {`Array Length: ${selectedExercise.array.length}`}
+              </Text>
+              <Button3D
+                position={[0.75, 0, 0]}
+                label="+"
+                onClick={() => {
+                  if (selectedExercise.array.length < 15) {
+                    setSelectedExercise({ ...selectedExercise, array: [...selectedExercise.array, 1] })
+                  }
+                }}
+                color="#4caf50"
+                width={0.12}
+                fontSize={0.045}
+              />
+              <Button3D
+                position={[0.9, 0, 0]}
+                label="-"
+                onClick={() => {
+                  if (selectedExercise.array.length > 2) {
+                    setSelectedExercise({ ...selectedExercise, array: selectedExercise.array.slice(0, selectedExercise.array.length - 1) })
+                  }
+                }}
+                color="#e53935"
+                width={0.12}
+                fontSize={0.055}
+              />
+            </group>
+            <group position={[0, -0.15, 0.03]}>
+              <Text fontSize={0.055} color="#fff" anchorX="left" anchorY="middle" position={[0, 0, 0]}>
+                Array Values:
+              </Text>
+              {selectedExercise.array.map((val, arrIdx) => {
+                const valueWidth = 0.15;
+                const gap = 0.025; // reduced spacing
+                const sideMargin = 0.15;
+                const valuesPerRow = 7;
+                const row = Math.floor(arrIdx / valuesPerRow);
+                const col = arrIdx % valuesPerRow;
+                const x = -panelWidth/2 + sideMargin + col * (valueWidth + gap) + valueWidth/2;
+                const y = 0.06 - row * 0.16; // increased vertical spacing
+                return (
+                  <group key={arrIdx} position={[x, y, 0]}>
+                    <Input3D
+                      position={[1.25, -0.07, 0]}
+                      value={val.toString()}
+                      color='#A9A9A9'
+                      onChange={inputVal => {
+                        const num = Number(inputVal)
+                        if (!isNaN(num)) {
+                          const newArr = selectedExercise.array.map((v, i) => i === arrIdx ? num : v)
+                          setSelectedExercise({ ...selectedExercise, array: newArr })
+                        }
+                      }}
+                      width={valueWidth}
+                      height={0.15}
+                      label={`Value #${arrIdx + 1}`}
+                      fontSize={0.045}
+                      textColor='#000'
+                    />
+                  </group>
+                );
+              })}
+            </group>
+            {/* Save Button - further down */}
+            <Button3D
+              position={[0.10, -0.75, 0]}
+              label={selectedExercise._id ? 'Update' : 'Save'}
+              onClick={handleSave}
+              color="#4caf50"
+              width={0.36}
+              fontSize={0.045}
+            />
           </group>
+        )}
+        {/* Feedback message */}
+        {feedback && (
+          <Text
+            position={[0, -panelHeight/2 + 0.08, panelDepth/2 + 0.02]}
+            fontSize={0.07}
+            color="#FFC107"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={panelWidth-0.2}
+          >
+            {loading ? 'Loading...' : feedback}
+          </Text>
         )}
       </group>
     )

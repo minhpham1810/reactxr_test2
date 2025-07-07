@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { Environment, OrbitControls, Text, Html } from '@react-three/drei'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { XR, createXRStore, useXR } from '@react-three/xr'
 import './App.css'
 import DemoSortVisualizer from './components/DemoSortVisualizer'
@@ -32,7 +32,7 @@ export function App() {
     description: '',
     exercises: []
   })
-  const [selectedExerciseIdx, setSelectedExerciseIdx] = useState(null)
+  const [selectedExercise, setSelectedExercise] = useState(null)
 
   // Step through insertion sort (Demo Mode)
   const nextStep = () => {
@@ -107,6 +107,15 @@ export function App() {
     return null
   }
 
+  // Load selected exercise into exercise mode
+  useEffect(() => {
+    if (mode === 'exercise' && lesson.exercises && selectedExercise !== null && lesson.exercises[selectedExercise]) {
+      setExerciseArray([...lesson.exercises[selectedExercise].array])
+      setExerciseFeedback(lesson.exercises[selectedExercise].instructions || '')
+      setMoveHistory([])
+    }
+  }, [mode, lesson, selectedExercise])
+
   return (
     <div className="app-root">
       <Canvas
@@ -156,8 +165,8 @@ export function App() {
             setAuthoringMode={setAuthoringMode}
             lesson={lesson}
             setLesson={setLesson}
-            selectedExerciseIdx={selectedExerciseIdx}
-            setSelectedExerciseIdx={setSelectedExerciseIdx}
+            selectedExercise={selectedExercise}
+            setSelectedExercise={setSelectedExercise}
           />
           {/* Main Visualizer: Demo or Exercise Mode */}
           {mode === 'demo' ? (
@@ -172,8 +181,14 @@ export function App() {
             />
           ) : (
             <ExerciseSortVisualizer
-              array={exerciseArray}
-              setArray={setExerciseArray}
+              array={selectedExercise ? selectedExercise.array : exerciseArray}
+              setArray={arr => {
+                if (selectedExercise) {
+                  setSelectedExercise({ ...selectedExercise, array: arr })
+                } else {
+                  setExerciseArray(arr)
+                }
+              }}
               moveHistory={moveHistory}
               setMoveHistory={setMoveHistory}
               feedback={exerciseFeedback}

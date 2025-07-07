@@ -29,3 +29,59 @@ export const getCompartmentPos = (idx, boxWidth, compartmentWidth, yBase, SCENE_
     }
     return true
   }
+
+// --- Backend API helpers for exercises ---
+const API_URL = '/api/exercises'
+
+export async function getExercises() {
+  const res = await fetch(API_URL)
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to fetch exercises: ${error}`);
+  }
+  return res.json()
+}
+
+export async function getExercise(id) {
+  const res = await fetch(`${API_URL}/${id}`)
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to fetch exercise: ${error}`);
+  }
+  return res.json()
+}
+
+export async function saveExercise(exercise) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(exercise)
+  })
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to save exercise: ${error}`);
+  }
+  return res.json()
+}
+
+export async function updateExercise(id, update) {
+  const res = await fetch(`${API_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update)
+  })
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to update exercise: ${error}`);
+  }
+  return res.json()
+}
+
+export async function deleteExercise(id) {
+  const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const error = await res.text();
+    throw new Error(`Failed to delete exercise: ${error}`);
+  }
+  return res.json()
+}
