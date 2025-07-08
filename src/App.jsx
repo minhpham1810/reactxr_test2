@@ -122,7 +122,7 @@ export function App() {
         shadows
         className="scene-canvas"
         gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 1.2, 2.2], fov: 60 }}
+        camera={{ position: [0, 1, 1.2], fov: 60 }}
         style={{}}
       >
         <XR store={store}>
