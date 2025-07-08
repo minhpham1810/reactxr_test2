@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { getExercises, saveExercise, updateExercise, deleteExercise } from './helpers'
 
 export function AuthoringPanel3D({
-    authoringMode, setAuthoringMode, selectedExercise, setSelectedExercise
+    selectedExercise, setSelectedExercise
 }) {
     // Panel position
     const panelPos = [-1.5, 2.2, -1]

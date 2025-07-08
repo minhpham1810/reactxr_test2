@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GeminiAPI = {
     getApiKey() {
-        const apiKey = 'AIzaSyCM6Q8cQ0VQSaPxx34KeAHwG703m53SlxE';
+        const apiKey = import.meta.env.GOOGLE_GEMINI_API_KEY;
         if (!apiKey) {
             console.error('REACT_APP_GEMINI_API_KEY is not set in environment');
             return null;

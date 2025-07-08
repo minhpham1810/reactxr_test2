@@ -2,12 +2,13 @@
 import express from 'express'
 import { MongoClient, ObjectId } from 'mongodb'
 import cors from 'cors'
-
+import dotenv from 'dotenv'
+dotenv.config()
 const app = express()
 app.use(express.json())
 app.use(cors())
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://minhpham181004:Back$pace181004@artoolcluster.khbamcl.mongodb.net/'
+const MONGO_URI = process.env.MONGO_URI || ''
 const DB_NAME = 'reactxr_lessons'
 const COLLECTION = 'exercises'
 

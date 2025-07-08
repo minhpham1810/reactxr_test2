@@ -31,57 +31,58 @@ export const getCompartmentPos = (idx, boxWidth, compartmentWidth, yBase, SCENE_
   }
 
 // --- Backend API helpers for exercises ---
-const API_URL = '/api/exercises'
+const API_BASE = import.meta.env.VITE_API_BASE || '';
+const EXERCISES_ENDPOINT = `${API_BASE}/api/exercises`;
 
 export async function getExercises() {
-  const res = await fetch(API_URL)
+  const res = await fetch(EXERCISES_ENDPOINT);
   if (!res.ok) {
     const error = await res.text();
     throw new Error(`Failed to fetch exercises: ${error}`);
   }
-  return res.json()
+  return res.json();
 }
 
 export async function getExercise(id) {
-  const res = await fetch(`${API_URL}/${id}`)
+  const res = await fetch(`${EXERCISES_ENDPOINT}/${id}`);
   if (!res.ok) {
     const error = await res.text();
     throw new Error(`Failed to fetch exercise: ${error}`);
   }
-  return res.json()
+  return res.json();
 }
 
 export async function saveExercise(exercise) {
-  const res = await fetch(API_URL, {
+  const res = await fetch(EXERCISES_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(exercise)
-  })
+  });
   if (!res.ok) {
     const error = await res.text();
     throw new Error(`Failed to save exercise: ${error}`);
   }
-  return res.json()
+  return res.json();
 }
 
 export async function updateExercise(id, update) {
-  const res = await fetch(`${API_URL}/${id}`, {
+  const res = await fetch(`${EXERCISES_ENDPOINT}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(update)
-  })
+  });
   if (!res.ok) {
     const error = await res.text();
     throw new Error(`Failed to update exercise: ${error}`);
   }
-  return res.json()
+  return res.json();
 }
 
 export async function deleteExercise(id) {
-  const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' })
+  const res = await fetch(`${EXERCISES_ENDPOINT}/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const error = await res.text();
     throw new Error(`Failed to delete exercise: ${error}`);
   }
-  return res.json()
+  return res.json();
 }
