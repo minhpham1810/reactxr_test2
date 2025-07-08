@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Text, Html } from '@react-three/drei'
 import React, { useState, useEffect } from 'react'
 import { getExercises, saveExercise, updateExercise, deleteExercise } from './helpers'
 
@@ -20,6 +20,7 @@ export function AuthoringPanel3D({
     const VISIBLE_EXERCISES = 5
     const canScrollUp = exerciseScrollOffset > 0
     const canScrollDown = exercises.length > VISIBLE_EXERCISES && (exerciseScrollOffset + VISIBLE_EXERCISES) < exercises.length
+    const [editingField, setEditingField] = useState(null); // 'name' | 'description' | null
   
     // Load exercises from backend
     useEffect(() => {
@@ -220,24 +221,97 @@ export function AuthoringPanel3D({
               <boxGeometry args={[1.8, 1.25, 0.06]} />
               <meshStandardMaterial color="#23283a" opacity={0.98} transparent />
             </mesh>
-            {/* Exercise Name Input */}
-            <Input3D
-              position={[0.4, 0.3, 0]}
-              value={selectedExercise.name || ''}
-              onChange={val => setSelectedExercise({ ...selectedExercise, name: val })}
-              width={1.0}
-              label="Exercise Name"
-              fontSize={0.055}
-            />
+            {/* Exercise Name Input (3D Text or Input) */}
+            <group position={[0.4, 0.3, 0]}>
+              <mesh>
+                <boxGeometry args={[1.0, 0.13, 0.06]} />
+                <meshStandardMaterial color="#23283a" />
+              </mesh>
+              {editingField === 'name' ? (
+                <Html center>
+                  <input
+                    type="text"
+                    value={selectedExercise.name || ''}
+                    onChange={e => setSelectedExercise({ ...selectedExercise, name: e.target.value })}
+                    onBlur={() => setEditingField(null)}
+                    onKeyDown={e => { if (e.key === 'Enter') setEditingField(null); }}
+                    autoFocus
+                    style={{
+                      width: '220px',
+                      height: '36px',
+                      fontSize: '22px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#fff',
+                      outline: 'none',
+                      textAlign: 'left',
+                      boxShadow: 'none',
+                    }}
+                  />
+                </Html>
+              ) : (
+                <Text
+                  position={[-0.44, 0, 0.04]}
+                  fontSize={0.08}
+                  color="#fff"
+                  anchorX="left"
+                  anchorY="middle"
+                  maxWidth={0.9}
+                  onClick={() => setEditingField('name')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {selectedExercise.name || 'Exercise Name'}
+                </Text>
+              )}
+            </group>
 
-            <Input3D
-              position={[0.4, 0.15, 0]}
-              value={selectedExercise.description || ''}
-              onChange={val => setSelectedExercise({ ...selectedExercise, description: val })}
-              width={1.0}
-              label="Description"
-              fontSize={0.055}
-            />
+            {/* Description Input (3D Text or Input) */}
+            <group position={[0.4, 0.15, 0]}>
+              <mesh>
+                <boxGeometry args={[1.0, 0.13, 0.06]} />
+                <meshStandardMaterial color="#23283a" />
+              </mesh>
+              {editingField === 'description' ? (
+                <Html center>
+                  <input
+                    type="text"
+                    value={selectedExercise.description || ''}
+                    onChange={e => setSelectedExercise({ ...selectedExercise, description: e.target.value })}
+                    onBlur={() => setEditingField(null)}
+                    onKeyDown={e => { if (e.key === 'Enter') setEditingField(null); }}
+                    autoFocus
+                    style={{
+                      width: '220px',
+                      height: '36px',
+                      fontSize: '22px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#fff',
+                      outline: 'none',
+                      textAlign: 'left',
+                      boxShadow: 'none',
+                    }}
+                  />
+                </Html>
+              ) : (
+                <Text
+                  position={[-0.44, 0, 0.04]}
+                  fontSize={0.08}
+                  color="#fff"
+                  anchorX="left"
+                  anchorY="middle"
+                  maxWidth={0.9}
+                  onClick={() => setEditingField('description')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {selectedExercise.description || 'Description'}
+                </Text>
+              )}
+            </group>
             {/* Array Length */}
             <group position={[0, 0, 0.03]}>
               <Text fontSize={0.055} color="#fff" anchorX="left" anchorY="middle" position={[0, 0, 0]}>
@@ -279,27 +353,59 @@ export function AuthoringPanel3D({
                 const valuesPerRow = 7;
                 const row = Math.floor(arrIdx / valuesPerRow);
                 const col = arrIdx % valuesPerRow;
-                const x = -panelWidth/2 + sideMargin + col * (valueWidth + gap) + valueWidth/2;
-                const y = 0.06 - row * 0.16; // increased vertical spacing
+                const x = -panelWidth/2 + sideMargin + col * (valueWidth + gap) + valueWidth/2 +1.25;
+                const y = 0.06 - row * 0.16-0.1; // increased vertical spacing
                 return (
                   <group key={arrIdx} position={[x, y, 0]}>
-                    <Input3D
-                      position={[1.25, -0.07, 0]}
-                      value={val.toString()}
-                      color='#A9A9A9'
-                      onChange={inputVal => {
-                        const num = Number(inputVal)
-                        if (!isNaN(num)) {
-                          const newArr = selectedExercise.array.map((v, i) => i === arrIdx ? num : v)
-                          setSelectedExercise({ ...selectedExercise, array: newArr })
-                        }
-                      }}
-                      width={valueWidth}
-                      height={0.15}
-                      label={`Value #${arrIdx + 1}`}
-                      fontSize={0.045}
-                      textColor='#000'
-                    />
+                    <mesh>
+                      <boxGeometry args={[valueWidth, 0.15, 0.06]} />
+                      <meshStandardMaterial color="#A9A9A9" />
+                    </mesh>
+                    {editingField === `array-${arrIdx}` ? (
+                      <Html center>
+                        <input
+                          type="number"
+                          value={val}
+                          onChange={e => {
+                            const num = Number(e.target.value)
+                            if (!isNaN(num)) {
+                              const newArr = selectedExercise.array.map((v, i) => i === arrIdx ? num : v)
+                              setSelectedExercise({ ...selectedExercise, array: newArr })
+                            }
+                          }}
+                          onBlur={() => setEditingField(null)}
+                          onKeyDown={e => { if (e.key === 'Enter') setEditingField(null); }}
+                          autoFocus
+                          style={{
+                            width: '40px',
+                            height: '30px',
+                            fontSize: '18px',
+                            textAlign: 'center',
+                            borderRadius: '4px',
+                            border: 'none',
+                            background: 'transparent',
+                            color: '#000',
+                            outline: 'none',
+                            boxShadow: 'none',
+                          }}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                        />
+                      </Html>
+                    ) : (
+                      <Text
+                        position={[-valueWidth/2 + 0.02, 0, 0.04]}
+                        fontSize={0.045}
+                        color="#000"
+                        anchorX="left"
+                        anchorY="middle"
+                        maxWidth={valueWidth-0.04}
+                        onClick={() => setEditingField(`array-${arrIdx}`)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {val}
+                      </Text>
+                    )}
                   </group>
                 );
               })}

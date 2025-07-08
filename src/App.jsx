@@ -127,77 +127,93 @@ export function App() {
       >
         <XR store={store}>
           <XRStatus />
-          {!isPresenting && (
-            <Html center className="ar-enter-html">
-              <button className="ar-enter-btn" onClick={handleEnterAR}>
-                Enter AR
-              </button>
-            </Html>
-          )}
-          {isPresenting && (
-            <group position={[0, 2.0, -1]}>
-              <mesh
-                position={[0, 0, 0]}
-                onClick={handleExitAR}
-              >
-                <boxGeometry args={[1.2, 0.32, 0.08]} />
-                <meshStandardMaterial color="#e53935" />
-                <Text
-                  position={[0, 0, 0.06]}
-                  fontSize={0.18}
-                  color="#fff"
-                  anchorX="center"
-                  anchorY="middle"
+          {/* Scale the main scene content by half and move up by one unit */}
+          <group scale={[0.5, 0.5, 0.5]} position={[0, 0.5, 0]}>
+            {!isPresenting && (
+              <group position={[0, 0, -0.65]}>
+                <mesh
+                  position={[0, 0, 0]}
+                  onClick={handleEnterAR}
                 >
-                  Exit AR
-                </Text>
-              </mesh>
-            </group>
-          )}
+                  <boxGeometry args={[1.0, 0.3, 0.08]} />
+                  <meshStandardMaterial color="#2196f3" />
+                  <Text
+                    position={[0, 0, 0.06]}
+                    fontSize={0.18}
+                    color="#fff"
+                    anchorX="center"
+                    anchorY="middle"
+                  >
+                    Enter AR
+                  </Text>
+                </mesh>
+              </group>
+            )}
+            {isPresenting && (
+              <group position={[0, 2.0, -1]}>
+                <mesh
+                  position={[0, 0, 0]}
+                  onClick={handleExitAR}
+                >
+                  <boxGeometry args={[1.2, 0.32, 0.08]} />
+                  <meshStandardMaterial color="#e53935" />
+                  <Text
+                    position={[0, 0, 0.06]}
+                    fontSize={0.18}
+                    color="#fff"
+                    anchorX="center"
+                    anchorY="middle"
+                  >
+                    Exit AR
+                  </Text>
+                </mesh>
+              </group>
+            )}
+            {/* 3D Mode Toggle Button */}
+            <RenderModeToggle SCENE_SCALE={0.7} mode={mode} setMode={setMode} />
+            {/* 3D Authoring Panel always visible */}
+            <AuthoringPanel3D
+              authoringMode={authoringMode}
+              setAuthoringMode={setAuthoringMode}
+              lesson={lesson}
+              setLesson={setLesson}
+              selectedExercise={selectedExercise}
+              setSelectedExercise={setSelectedExercise}
+            />
+            {/* Main Visualizer: Demo or Exercise Mode */}
+            {mode === 'demo' ? (
+              <DemoSortVisualizer
+                array={array}
+                i={i}
+                j={j}
+                isSorting={isSorting}
+                done={done}
+                nextStep={nextStep}
+                reset={reset}
+              />
+            ) : (
+              <ExerciseSortVisualizer
+                array={selectedExercise ? selectedExercise.array : exerciseArray}
+                setArray={arr => {
+                  if (selectedExercise) {
+                    setSelectedExercise({ ...selectedExercise, array: arr })
+                  } else {
+                    setExerciseArray(arr)
+                  }
+                }}
+                moveHistory={moveHistory}
+                setMoveHistory={setMoveHistory}
+                feedback={exerciseFeedback}
+                setFeedback={setExerciseFeedback}
+                undo={undoExercise}
+                reset={reset}
+                setIsDragging={setIsDragging}
+              />
+            )}
+          </group>
           <ambientLight intensity={0.7} />
           <directionalLight position={[2, 4, 2]} intensity={1.1} />
           <OrbitControls enabled={!isDragging} enablePan={false} enableZoom={true} enableRotate={true} minDistance={1.2} maxDistance={6} target={[0, 1.2, -1]} />
-          {/* 3D Mode Toggle Button */}
-          <RenderModeToggle SCENE_SCALE={0.7} mode={mode} setMode={setMode} />
-          {/* 3D Authoring Panel always visible */}
-          <AuthoringPanel3D
-            authoringMode={authoringMode}
-            setAuthoringMode={setAuthoringMode}
-            lesson={lesson}
-            setLesson={setLesson}
-            selectedExercise={selectedExercise}
-            setSelectedExercise={setSelectedExercise}
-          />
-          {/* Main Visualizer: Demo or Exercise Mode */}
-          {mode === 'demo' ? (
-            <DemoSortVisualizer
-              array={array}
-              i={i}
-              j={j}
-              isSorting={isSorting}
-              done={done}
-              nextStep={nextStep}
-              reset={reset}
-            />
-          ) : (
-            <ExerciseSortVisualizer
-              array={selectedExercise ? selectedExercise.array : exerciseArray}
-              setArray={arr => {
-                if (selectedExercise) {
-                  setSelectedExercise({ ...selectedExercise, array: arr })
-                } else {
-                  setExerciseArray(arr)
-                }
-              }}
-              moveHistory={moveHistory}
-              setMoveHistory={setMoveHistory}
-              feedback={exerciseFeedback}
-              setFeedback={setExerciseFeedback}
-              undo={undoExercise}
-              reset={reset}
-              setIsDragging={setIsDragging}
-            />
-          )}
           <Environment preset="park" />
         </XR>
       </Canvas>
