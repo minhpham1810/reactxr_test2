@@ -148,7 +148,7 @@ export function App() {
           <XR store={store}>
             <XRStatus />
             {/* Move scene to simulate eye-to-laptop distance */}
-            <group scale={[0.25, 0.25, 0.25]} position={[0, 1, 0]}>
+            <group scale={[0.25, 0.25, 0.25]} position={[0, 0.7, 0]}>
               {/* Exit AR 3D button, only in AR */}
               {isPresenting && (
                 <group position={[0, 1.2, -1]} scale={[0.4, 0.4, 0.4]}>
