@@ -44,6 +44,8 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     const [arDraggingIdx, setArDraggingIdx] = useState(null)
     const [arIsDragging, setArIsDragging] = useState(false)
     const [hitPos, setHitPos] = useState(null)
+    const [arDragAnimPos, setArDragAnimPos] = useState(null)
+    const [arDragOffset, setArDragOffset] = useState(null)
     const matrixHelper = useRef(new Matrix4())
   
     // Animate spheres to their target positions
@@ -99,6 +101,8 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     const handleARSelectStart = (idx) => {
       setArDraggingIdx(idx)
       setArIsDragging(true)
+      // Compute offset on next XRHitTest result
+      setArDragOffset(null)
     }
     const handleARSelectEnd = () => {
       if (arDraggingIdx !== null && hitPos) {
@@ -149,6 +153,31 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     const FEEDBACK_BOX_DEPTH = 0.04 * SCENE_SCALE;
     const FEEDBACK_TEXT_PADDING = 0.12 * SCENE_SCALE;
   
+    // Animate AR-dragged sphere smoothly toward hitPos
+    React.useEffect(() => {
+      let animId;
+      function animate() {
+        if (arIsDragging && hitPos && arDragAnimPos) {
+          // Lerp toward hitPos
+          const t = 0.25;
+          const next = lerpVec3(arDragAnimPos, hitPos, t);
+          setArDragAnimPos(next);
+        } else if (arIsDragging && hitPos && !arDragAnimPos) {
+          setArDragAnimPos(hitPos);
+        }
+        animId = requestAnimationFrame(animate);
+      }
+      if (arIsDragging && hitPos) {
+        animId = requestAnimationFrame(animate);
+      }
+      return () => cancelAnimationFrame(animId);
+    }, [arIsDragging, hitPos, arDragAnimPos]);
+
+    // Reset AR drag anim pos on drag end
+    React.useEffect(() => {
+      if (!arIsDragging) setArDragAnimPos(null);
+    }, [arIsDragging]);
+  
     return (
       <>
         {/* XRHitTest for AR drag-and-drop */}
@@ -159,6 +188,16 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
               getWorldMatrix(matrixHelper.current, results[0])
               const pos = new Vector3().setFromMatrixPosition(matrixHelper.current)
               setHitPos([pos.x, yBase + 0.18 * SCENE_SCALE, zBase])
+              if (arIsDragging && arDraggingIdx !== null) {
+                const sphereCenter = getCompartmentPos(arDraggingIdx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase)
+                if (arDragOffset === null) {
+                  setArDragOffset([
+                    sphereCenter[0] - pos.x,
+                    sphereCenter[1] - pos.y,
+                    sphereCenter[2] - pos.z
+                  ])
+                }
+              }
             }}
           />
         )}
@@ -215,9 +254,14 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
         {/* Spheres as elements (draggable) */}
         {array.map((value, idx) => {
           const isDragged = dragState.dragging && dragState.draggedIdx === idx;
-          // AR: use hitPos if this sphere is being dragged in AR
-          const pos = arIsDragging && arDraggingIdx === idx && hitPos
-            ? hitPos
+          // AR: use smoothed arDragAnimPos if this sphere is being dragged in AR
+          const arTargetPos = (arDragAnimPos || hitPos)
+          const pos = arIsDragging && arDraggingIdx === idx && arTargetPos
+            ? [
+                arTargetPos[0] + (arDragOffset ? arDragOffset[0] : 0),
+                arTargetPos[1] + (arDragOffset ? arDragOffset[1] : 0),
+                arTargetPos[2] + (arDragOffset ? arDragOffset[2] : 0)
+              ]
             : spherePositions[idx];
           return (
             <Interactive

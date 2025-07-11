@@ -148,7 +148,7 @@ export function App() {
           <XR store={store}>
             <XRStatus />
             {/* Move scene to simulate eye-to-laptop distance */}
-            <group scale={[0.5, 0.5, 0.5]} position={[0, 0.5, -0.8]}>
+            <group scale={[0.25, 0.25, 0.25]} position={[0, 1, 0.5]}>
               {/* Exit AR 3D button, only in AR */}
               {isPresenting && (
                 <group position={[0, 2.0, -1]}>
@@ -173,14 +173,16 @@ export function App() {
               {/* 3D Mode Toggle Button */}
               <RenderModeToggle SCENE_SCALE={0.7} mode={mode} setMode={setMode} />
               {isPresenting && (
-                <AuthoringPanel3D
-                  authoringMode={authoringMode}
-                  setAuthoringMode={setAuthoringMode}
-                  lesson={lesson}
-                  setLesson={setLesson}
-                  selectedExercise={selectedExercise}
-                  setSelectedExercise={setSelectedExercise}
-                />
+                <group position={[0, 1.2, -1]} scale={[0.4, 0.4, 0.4]}>
+                  <AuthoringPanel3D
+                    authoringMode={authoringMode}
+                    setAuthoringMode={setAuthoringMode}
+                    lesson={lesson}
+                    setLesson={setLesson}
+                    selectedExercise={selectedExercise}
+                    setSelectedExercise={setSelectedExercise}
+                  />
+                </group>
               )}
               {/* Main Visualizer: Demo or Exercise Mode */}
               {mode === 'demo' ? (
