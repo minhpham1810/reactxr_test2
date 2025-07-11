@@ -142,36 +142,14 @@ export function App() {
           shadows
           className="scene-canvas"
           gl={{ antialias: true, alpha: true }}
-          camera={{ position: [0, 1, 1.2], fov: 60 }}
+          camera={{ position: [0, 1.4, 1.2], fov: 60 }}
           style={{}}
         >
           <XR store={store}>
             <XRStatus />
             {/* Move scene to simulate eye-to-laptop distance */}
-            <group scale={[0.25, 0.25, 0.25]} position={[0, 1, 0.5]}>
+            <group scale={[0.25, 0.25, 0.25]} position={[0, 1, 0]}>
               {/* Exit AR 3D button, only in AR */}
-              {isPresenting && (
-                <group position={[0, 2.0, -1]}>
-                  <mesh
-                    position={[0, 0, 0]}
-                    onClick={handleExitAR}
-                  >
-                    <boxGeometry args={[1.2, 0.32, 0.08]} />
-                    <meshStandardMaterial color="#e53935" />
-                    <Text
-                      position={[0, 0, 0.06]}
-                      fontSize={0.18}
-                      color="#fff"
-                      anchorX="center"
-                      anchorY="middle"
-                    >
-                      Exit AR
-                    </Text>
-                  </mesh>
-                </group>
-              )}
-              {/* 3D Mode Toggle Button */}
-              <RenderModeToggle SCENE_SCALE={0.7} mode={mode} setMode={setMode} />
               {isPresenting && (
                 <group position={[0, 1.2, -1]} scale={[0.4, 0.4, 0.4]}>
                   <AuthoringPanel3D
@@ -184,6 +162,8 @@ export function App() {
                   />
                 </group>
               )}
+              {/* 3D Mode Toggle Button */}
+              <RenderModeToggle SCENE_SCALE={0.7} mode={mode} setMode={setMode} />
               {/* Main Visualizer: Demo or Exercise Mode */}
               {mode === 'demo' ? (
                 <DemoSortVisualizer
