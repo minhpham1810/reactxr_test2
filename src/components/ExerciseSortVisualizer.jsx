@@ -5,6 +5,12 @@ import GeminiAPI from './gemini.js'
 import { XRHitTest, Interactive } from '@react-three/xr'
 import { Text } from '@react-three/drei'
 
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+function lerpVec3(a, b, t) {
+  return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+}
 
 function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, feedback, setFeedback, undo, reset, setIsDragging }) {
     // Use the same SCENE_SCALE as the demo
@@ -17,6 +23,17 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     const yBase = 1.2 * SCENE_SCALE
     const zBase = -1 * SCENE_SCALE
   
+    // Drag state (global for web)
+    const [dragState, setDragState] = useState({
+      dragging: false,
+      draggedIdx: null,
+      dragPos: null,
+      pointerId: null,
+    });
+    // Animated sphere positions
+    const [spherePositions, setSpherePositions] = useState(array.map((_, idx) => getCompartmentPos(idx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase)));
+    // For animation frame
+    const animRef = useRef();
     // Drag state
     const [draggedIdx, setDraggedIdx] = useState(null)
     const [dragPos, setDragPos] = useState(null)
@@ -29,24 +46,54 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     const [hitPos, setHitPos] = useState(null)
     const matrixHelper = useRef(new Matrix4())
   
-    // Web drag handlers
+    // Animate spheres to their target positions
+    React.useEffect(() => {
+      let running = true;
+      function animate() {
+        setSpherePositions(prev => {
+          return prev.map((pos, idx) => {
+            // If dragging this sphere, don't animate
+            if (dragState.dragging && dragState.draggedIdx === idx && dragState.dragPos) {
+              return dragState.dragPos;
+            }
+            // Target position
+            const target = getCompartmentPos(idx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase);
+            // Animate with lerp
+            const t = 0.25; // Smoothing factor
+            return lerpVec3(pos, target, t);
+          });
+        });
+        if (running) animRef.current = requestAnimationFrame(animate);
+      }
+      animRef.current = requestAnimationFrame(animate);
+      return () => {
+        running = false;
+        cancelAnimationFrame(animRef.current);
+      };
+    }, [array, dragState.dragging, dragState.draggedIdx, dragState.dragPos]);
+  
+    // Web drag handlers (global)
     const handlePointerDown = (idx, e) => {
-      e.stopPropagation()
-      setDraggedIdx(idx)
-      setDragPos(getCompartmentPos(idx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase))
-      setIsDragging(true)
-    }
+      e.stopPropagation();
+      setDragState({ dragging: true, draggedIdx: idx, dragPos: getCompartmentPos(idx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase), pointerId: e.pointerId });
+      setIsDragging(true);
+    };
     const handlePointerMove = (e) => {
-      if (!dragging) return
-      // Use e.point for accurate 3D cursor tracking
-      const x = e.point.x
-      setDragPos([x, yBase + 0.18 * SCENE_SCALE, zBase])
-    }
-    const handlePointerUp = (e) => {
-      if (!dragging) return
-      handleDrop(draggedIdx, dragPos)
-      setIsDragging(false)
-    }
+      if (!dragState.dragging || dragState.pointerId !== e.pointerId) return;
+      const x = e.point.x;
+      setDragState(ds => ({ ...ds, dragPos: [x, yBase + 0.18 * SCENE_SCALE, zBase] }));
+    };
+    // Listen for pointer up on the whole canvas
+    React.useEffect(() => {
+      function onPointerUp(e) {
+        if (!dragState.dragging) return;
+        setIsDragging(false);
+        handleDrop(dragState.draggedIdx, dragState.dragPos);
+        setDragState({ dragging: false, draggedIdx: null, dragPos: null, pointerId: null });
+      }
+      window.addEventListener('pointerup', onPointerUp);
+      return () => window.removeEventListener('pointerup', onPointerUp);
+    });
   
     // AR drag handlers using Interactive and XRHitTest
     const handleARSelectStart = (idx) => {
@@ -66,8 +113,6 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
     const handleDrop = (idx, pos) => {
       const nearestIdx = getNearestCompartment(pos[0], array.length, boxWidth, compartmentWidth)
       if (nearestIdx === idx) {
-        setDraggedIdx(null)
-        setDragPos(null)
         return
       }
       // Move sphere from idx to nearestIdx
@@ -76,8 +121,6 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
       newArr.splice(nearestIdx, 0, moved)
       setMoveHistory([...moveHistory, { array }])
       setArray(newArr)
-      setDraggedIdx(null)
-      setDragPos(null)
       // Check correctness
       const sorted = checkSorted(newArr)
       if (sorted) {
@@ -171,11 +214,11 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
         ))}
         {/* Spheres as elements (draggable) */}
         {array.map((value, idx) => {
-          const isDragged = draggedIdx === idx || arDraggingIdx === idx
+          const isDragged = dragState.dragging && dragState.draggedIdx === idx;
           // AR: use hitPos if this sphere is being dragged in AR
           const pos = arIsDragging && arDraggingIdx === idx && hitPos
             ? hitPos
-            : (draggedIdx === idx && dragPos ? dragPos : getCompartmentPos(idx, boxWidth, compartmentWidth, yBase, SCENE_SCALE, zBase))
+            : spherePositions[idx];
           return (
             <Interactive
               key={idx + '-sphere'}
@@ -188,8 +231,8 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
                 scale={1 * SCENE_SCALE}
                 onPointerDown={e => handlePointerDown(idx, e)}
                 onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
                 castShadow
+                style={{ cursor: 'grab' }}
               >
                 <sphereGeometry args={[0.11 * SCENE_SCALE, 32, 32]} />
                 <meshStandardMaterial color={isDragged ? '#FFC107' : '#2196f3'} />
@@ -206,6 +249,13 @@ function ExerciseSortVisualizer({ array, setArray, moveHistory, setMoveHistory, 
             </Interactive>
           )
         })}
+        {/* Ghost sphere for drag */}
+        {dragState.dragging && dragState.dragPos && (
+          <mesh position={dragState.dragPos} scale={1.1 * SCENE_SCALE} style={{ pointerEvents: 'none' }}>
+            <sphereGeometry args={[0.11 * SCENE_SCALE, 32, 32]} />
+            <meshStandardMaterial color="#FFC107" opacity={0.6} transparent />
+          </mesh>
+        )}
         {/* 3D Undo, Reset, and Suggestion Buttons */}
         <group position={[0, yBase - 0.5 * SCENE_SCALE, zBase]}>
           {/* Undo Button */}

@@ -33,6 +33,7 @@ body, #root {
   height: 100vh;
   width: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .scene-canvas {
@@ -126,4 +127,26 @@ body, #root {
   font-weight: 600;
   width: 150px;
   height: auto;
+}
+
+.enter-ar-btn {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: #2196f3;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2em;
+  font-weight: 600;
+  padding: 14px 38px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.enter-ar-btn:hover {
+  background: #1976d2;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.22);
 }

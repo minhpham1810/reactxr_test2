@@ -132,6 +132,12 @@ export function App() {
         )}
       </aside>
       <div className="scene-container">
+        {/* Enter AR button (HTML) */}
+        {!isPresenting && (
+          <button className="enter-ar-btn" onClick={handleEnterAR}>
+            Enter AR
+          </button>
+        )}
         <Canvas
           shadows
           className="scene-canvas"
@@ -141,28 +147,9 @@ export function App() {
         >
           <XR store={store}>
             <XRStatus />
-            {/* Scale the main scene content by half and move up by one unit */}
-            <group scale={[0.5, 0.5, 0.5]} position={[0, 0.5, 0]}>
-              {!isPresenting && (
-                <group position={[0, 0, -0.65]}>
-                  <mesh
-                    position={[0, 0, 0]}
-                    onClick={handleEnterAR}
-                  >
-                    <boxGeometry args={[1.0, 0.3, 0.08]} />
-                    <meshStandardMaterial color="#2196f3" />
-                    <Text
-                      position={[0, 0, 0.06]}
-                      fontSize={0.18}
-                      color="#fff"
-                      anchorX="center"
-                      anchorY="middle"
-                    >
-                      Enter AR
-                    </Text>
-                  </mesh>
-                </group>
-              )}
+            {/* Move scene to simulate eye-to-laptop distance */}
+            <group scale={[0.5, 0.5, 0.5]} position={[0, 0.5, -0.8]}>
+              {/* Exit AR 3D button, only in AR */}
               {isPresenting && (
                 <group position={[0, 2.0, -1]}>
                   <mesh
