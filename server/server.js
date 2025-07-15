@@ -6,7 +6,16 @@ import dotenv from 'dotenv'
 dotenv.config()
 const app = express()
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://reactxr-test2.vercel.app',
+    'https://reactxr-test2.onrender.com'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}))
 
 const MONGO_URI = process.env.MONGO_URI || ''
 const DB_NAME = 'reactxr_lessons'
