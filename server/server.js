@@ -17,6 +17,8 @@ app.use(cors({
   credentials: true
 }))
 
+app.options('*', cors()); // <-- Add this line
+
 const MONGO_URI = process.env.MONGO_URI || ''
 const DB_NAME = 'reactxr_lessons'
 const COLLECTION = 'exercises'
