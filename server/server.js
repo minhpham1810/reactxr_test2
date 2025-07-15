@@ -71,18 +71,24 @@ app.put('/api/exercises/:id', async (req, res) => {
     } catch (e) {
       return res.status(400).json({ error: 'Invalid ObjectId' });
     }
-    // Try to update by ObjectId
+
+    // Try to update, or insert if not found (upsert)
     const result = await exercises.findOneAndUpdate(
       { _id: objectId },
       { $set: update },
-      { returnDocument: 'after' }
+      { returnDocument: 'after', upsert: true }
     );
-    if (!result || !result.value) {
-      return res.status(404).json({ error: 'Not found' });
+
+    // result.lastErrorObject.updatedExisting tells if it was an update or insert
+    if (result.lastErrorObject && !result.lastErrorObject.updatedExisting) {
+      // Created new document
+      res.status(201).json(result.value);
+    } else {
+      // Updated existing document
+      res.json(result.value);
     }
-    res.json(result.value);
   } catch (err) {
-    console.error('Update error:', err);
+    console.error('Update/Upsert error:', err);
     res.status(500).json({ error: err.message });
   }
 });

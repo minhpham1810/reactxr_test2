@@ -150,3 +150,21 @@ body, #root {
   background: #1976d2;
   box-shadow: 0 6px 24px rgba(0,0,0,0.22);
 }
+
+.divider {
+  cursor: col-resize;
+  width: 6px;
+  background: #23283a;
+  z-index: 10;
+  transition: background 0.2s;
+}
+.divider:hover {
+  background: #1976d2;
+}
+
+.divider.info {
+  background: #181a20;
+}
+.divider.info:hover {
+  background: #FFC107;
+}

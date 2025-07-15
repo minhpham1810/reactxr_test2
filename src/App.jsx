@@ -1,6 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { Environment, OrbitControls, Text, Html } from '@react-three/drei'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { XR, createXRStore, useXR } from '@react-three/xr'
 import './App.css'
 import DemoSortVisualizer from './components/DemoSortVisualizer'
@@ -34,6 +34,34 @@ export function App() {
     exercises: []
   })
   const [selectedExercise, setSelectedExercise] = useState(null)
+
+  // Sidebar resizing state
+  const [sidebarWidth, setSidebarWidth] = useState(220)
+  const [infoPanelWidth, setInfoPanelWidth] = useState(320)
+  const resizingSidebar = useRef(false)
+  const resizingInfoPanel = useRef(false)
+
+  // Mouse event handlers for resizing
+  useEffect(() => {
+    function handleMouseMove(e) {
+      if (resizingSidebar.current) {
+        setSidebarWidth(Math.max(140, Math.min(e.clientX, 400)))
+      } else if (resizingInfoPanel.current) {
+        const vw = window.innerWidth
+        setInfoPanelWidth(Math.max(180, Math.min(vw - e.clientX, 500)))
+      }
+    }
+    function handleMouseUp() {
+      resizingSidebar.current = false
+      resizingInfoPanel.current = false
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   // Step through insertion sort (Demo Mode)
   const nextStep = () => {
@@ -118,8 +146,17 @@ export function App() {
   }, [mode, lesson, selectedExercise])
 
   return (
-    <div className="main-layout">
-      <aside className="sidebar">
+    <div
+      className="main-layout"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `${sidebarWidth}px 6px calc(100vw - ${sidebarWidth + infoPanelWidth + 12}px) 6px ${infoPanelWidth}px`,
+        height: '100vh',
+        width: '100vw',
+        background: '#16181d',
+      }}
+    >
+      <aside className="sidebar" style={{ width: sidebarWidth }}>
         {!isPresenting && (
           <AuthoringPanelHTML
             authoringMode={authoringMode}
@@ -131,6 +168,11 @@ export function App() {
           />
         )}
       </aside>
+      {/* Sidebar divider */}
+      <div
+        style={{ cursor: 'col-resize', width: 6, background: '#23283a', zIndex: 10 }}
+        onMouseDown={() => (resizingSidebar.current = true)}
+      />
       <div className="scene-container">
         {/* Enter AR button (HTML) */}
         {!isPresenting && (
@@ -150,6 +192,27 @@ export function App() {
             {/* Move scene to simulate eye-to-laptop distance */}
             <group scale={[0.25, 0.25, 0.25]} position={[0, 0.7, 0]}>
               {/* Exit AR 3D button, only in AR */}
+              {isPresenting && (
+                <group position={[0, 1.6, -1]} scale={[0.7, 0.7, 0.7]}>
+                  {/* 3D Exit AR Button */}
+                  <group position={[0, 0.5, 0]}>
+                    <mesh onClick={handleExitAR}>
+                      <boxGeometry args={[0.7, 0.18, 0.08]} />
+                      <meshStandardMaterial color={'#e53935'} />
+                      <Text
+                        position={[0, 0, 0.06]}
+                        fontSize={0.11}
+                        color="#fff"
+                        anchorX="center"
+                        anchorY="middle"
+                      >
+                        Exit AR
+                      </Text>
+                    </mesh>
+                  </group>
+                </group>
+              )}
+              {/* Authoring Panel 3D, only in AR */}
               {isPresenting && (
                 <group position={[0, 1.2, -1]} scale={[0.4, 0.4, 0.4]}>
                   <AuthoringPanel3D
@@ -202,7 +265,12 @@ export function App() {
           </XR>
         </Canvas>
       </div>
-      <section className="info-panel">
+      {/* Info panel divider */}
+      <div
+        style={{ cursor: 'col-resize', width: 6, background: '#181a20', zIndex: 10 }}
+        onMouseDown={() => (resizingInfoPanel.current = true)}
+      />
+      <section className="info-panel" style={{ width: infoPanelWidth }}>
         <h2>Info Panel</h2>
         <p>Details, explanations, or controls here</p>
       </section>
