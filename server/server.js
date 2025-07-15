@@ -6,16 +6,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 const app = express()
 app.use(express.json())
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://reactxr-test2.vercel.app',
-    'https://reactxr-test2.onrender.com'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}))
+app.use(cors())
 
 app.options('*', cors()); // <-- Add this line
 
