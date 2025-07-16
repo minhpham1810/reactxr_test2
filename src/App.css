@@ -7,9 +7,78 @@ body, #root {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
-.scene-canvas {
+.main-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 320px;
   height: 100vh;
   width: 100vw;
+  background: #16181d;
+}
+
+.sidebar {
+  background: #222a38;
+  color: #fff;
+  padding: 24px 16px;
+  border-right: 1px solid #23283a;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scene-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #181a20;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.scene-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  min-width: 600px;
+  background: #181a20;
+  display: block;
+}
+
+.info-panel {
+  background: #23283a;
+  color: #fff;
+  padding: 24px 20px;
+  border-left: 1px solid #181a20;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+@media (max-width: 1100px) {
+  .main-layout {
+    grid-template-columns: 160px 1fr 200px;
+  }
+  .info-panel {
+    padding: 16px 8px;
+  }
+  .sidebar {
+    padding: 16px 8px;
+  }
+}
+
+@media (max-width: 800px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar, .info-panel {
+    display: none;
+  }
+  .scene-container {
+    height: 100vh;
+    width: 100vw;
+  }
 }
 
 /* Toolbar and control styling moved to component */
@@ -43,26 +112,6 @@ body, #root {
   text-align: center;
 }
 
-@media (max-width: 768px) {
-  .scene-canvas {
-    height: 100vh;
-  }
-}
-
-.app-root {
-  width: 100vw;
-  height: 100vh;
-  position: relative;
-  overflow: hidden;
-}
-
-.scene-canvas {
-  background: #181a20;
-  width: 100vw;
-  height: 100vh;
-  display: block;
-}
-
 .ar-enter-html {
   pointer-events: auto;
 }
@@ -78,4 +127,44 @@ body, #root {
   font-weight: 600;
   width: 150px;
   height: auto;
+}
+
+.enter-ar-btn {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: #2196f3;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2em;
+  font-weight: 600;
+  padding: 14px 38px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.enter-ar-btn:hover {
+  background: #1976d2;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+}
+
+.divider {
+  cursor: col-resize;
+  width: 6px;
+  background: #23283a;
+  z-index: 10;
+  transition: background 0.2s;
+}
+.divider:hover {
+  background: #1976d2;
+}
+
+.divider.info {
+  background: #181a20;
+}
+.divider.info:hover {
+  background: #FFC107;
 }

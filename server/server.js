@@ -8,6 +8,8 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
+app.options('*', cors()); // <-- Add this line
+
 const MONGO_URI = process.env.MONGO_URI || ''
 const DB_NAME = 'reactxr_lessons'
 const COLLECTION = 'exercises'
@@ -75,7 +77,7 @@ app.put('/api/exercises/:id', async (req, res) => {
     const result = await exercises.findOneAndUpdate(
       { _id: objectId },
       { $set: update },
-      { returnDocument: 'after' }
+      { returnDocument: 'after', upsert: true }
     );
     if (!result || !result.value) {
       return res.status(404).json({ error: 'Not found' });
