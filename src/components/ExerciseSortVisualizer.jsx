@@ -9,6 +9,11 @@ import GeminiAPI from "./gemini.js";
 import { XRHitTest, Interactive } from "@react-three/xr";
 import { Text } from "@react-three/drei";
 
+// --- DEBUG HELPERS ---
+const DEBUG = true; // flip to false to silence the printout
+const t = () => (performance.now()/1000).toFixed(3);
+const log = (label, data = {}) => { if (DEBUG) console.log(`[${t()}] ${label}`, data); };
+
 function ExerciseSortVisualizer({
   array,
   setArray,
@@ -33,7 +38,12 @@ function ExerciseSortVisualizer({
   // Drag state
   const [draggedIdx, setDraggedIdx] = useState(null);
   const [dragPos, setDragPos] = useState(null);
-  const dragging = draggedIdx !== null;
+  //const dragging = draggedIdx !== null;
+  // use effect to update the status instead
+  React.useEffect(() => {
+    setIsDragging(draggedIdx !== null);
+  }, [draggedIdx, setIsDragging]);
+  
   const meshRefs = useRef([]);
 
   // AR drag state
@@ -41,6 +51,11 @@ function ExerciseSortVisualizer({
   const [arIsDragging, setArIsDragging] = useState(false);
   const [hitPos, setHitPos] = useState(null);
   const matrixHelper = useRef(new Matrix4());
+
+  // log the dragging info
+  React.useEffect(() => {
+    log('dragging Info', { dragging: draggedIdx !== null, draggedIdx, dragPos });
+  }, [draggedIdx, dragPos]);
 
   // Web drag handlers
   const handlePointerDown = (idx, e) => {
@@ -61,11 +76,13 @@ function ExerciseSortVisualizer({
         zBase
       )
     );
-    setIsDragging(true);
+    //setIsDragging(true);
+    
+    log('pointerDown', { idx, pointerId: e.pointerId });
   };
 
   const handlePointerMove = (e) => {
-    if (!dragging) return;
+    if (draggedIdx === null) { log('pointerMove: ignored (not dragging)'); return; }
     // Use e.point for accurate 3D cursor tracking
     const { x, y, z } = e.point;
     // Allow some vertical movement within constraints
@@ -78,18 +95,37 @@ function ExerciseSortVisualizer({
       zBase - 0.2 * SCENE_SCALE,
       Math.min(zBase + 0.2 * SCENE_SCALE, z)
     );
+    
+    log('pointerMove', { x: e.point.x, y: e.point.y, z: e.point.z, draggedIdx, rx: x, ry: constrainedY, rz: constrainedZ });
     setDragPos([x, constrainedY, constrainedZ]);
   };
 
+  // use effect to handle out of canvas pointer up
+  React.useEffect(() => {
+    const onWinUp = (e) => {
+      if (draggedIdx !== null) handlePointerUp(e);
+    };
+    window.addEventListener('pointerup', onWinUp);
+    return () => window.removeEventListener('pointerup', onWinUp);
+  }, [draggedIdx]);
+
   const handlePointerUp = (e) => {
-    if (!dragging) return;
+    if (draggedIdx === null) { log('pointerUp: ignored (not dragging)'); return; }
+    
+    // try to release the pointer whenever there is a dragging index
+    try {
+      meshRefs.current[draggedIdx]?.releasePointerCapture(e.pointerId);
+    } catch {}
+    
     // Release pointer capture
     const mesh = meshRefs.current[draggedIdx];
     if (mesh) {
       mesh.releasePointerCapture(e.pointerId);
     }
     handleDrop(draggedIdx, dragPos);
-    setIsDragging(false);
+    //setIsDragging(false);
+    
+    log('pointerUp', { pointerId: e.pointerId, draggedIdx, dragPos });
   };
 
   // AR drag handlers using Interactive and XRHitTest
@@ -120,6 +156,7 @@ function ExerciseSortVisualizer({
       boxWidth,
       compartmentWidth
     );
+    log('handleDrop', { idx: idx, nidx: nearestIdx });
     if (nearestIdx === idx) {
       setDraggedIdx(null);
       setDragPos(null);
@@ -276,8 +313,15 @@ function ExerciseSortVisualizer({
         const pos = targetPos;
         if (meshRefs.current[idx]) {
           const mesh = meshRefs.current[idx];
-          // Smoothly interpolate current position to target
-          mesh.position.lerp(new Vector3(...targetPos), 0.3);
+          if (isDragged) {
+            // no smoothing when it is dragging
+            mesh.position.set(targetPos[0], targetPos[1], targetPos[2]);
+          }
+          else {
+            // Smoothly interpolate current position to target
+            // why do we need this?
+            mesh.position.lerp(new Vector3(...targetPos), 0.3);
+          }
         }
         return (
           <Interactive

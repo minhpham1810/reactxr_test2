@@ -33,12 +33,37 @@ export const getCompartmentPos = (idx, boxWidth, compartmentWidth, yBase, SCENE_
 // --- Backend API helpers for exercises ---
 const API_BASE = import.meta.env.VITE_API_BASE || '';
 const EXERCISES_ENDPOINT = `${API_BASE}/api/exercises`;
+const USE_MOCK_UP_DEBUG = true;
 
 export async function getExercises() {
-  const res = await fetch(EXERCISES_ENDPOINT);
-  if (!res.ok) {
-    const error = await res.text();
-    throw new Error(`Failed to fetch exercises: ${error}`);
+  if (USE_MOCK_UP_DEBUG) {
+    // Mock a response
+    const mockData = [
+      {
+        _id: "ex1",
+        name: "Mockup1",
+        description: "Mocked exercise",
+        array: [1, 2, 3, 4, 5],
+      },
+      {
+        _id: "ex2",
+        name: "Mockup2",
+        description: "Another mocked exercise",
+        array: [10, 20, 30],
+      },
+    ];
+
+    const res = new Response(JSON.stringify(mockData), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  else {
+    const res = await fetch(EXERCISES_ENDPOINT);
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(`Failed to fetch exercises: ${error}`);
+    }
   }
   return res.json();
 }
